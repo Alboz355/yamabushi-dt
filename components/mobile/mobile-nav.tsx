@@ -22,7 +22,15 @@ export function MobileNav({ user, profile, onSignOut }: MobileNavProps) {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-    { href: "/booking", label: "Planifier", icon: "📅" }, // Changed "Réservations" to "Planifier"
+    {
+      href: "/booking",
+      label: "Planifier",
+      icon: "📅",
+      submenu: [
+        { href: "/booking", label: "Nouveaux cours", icon: "➕" },
+        { href: "/planifier/mes-cours", label: "Mes cours planifiés", icon: "📋" },
+      ],
+    },
     { href: "/progress", label: "Progression", icon: "📈" },
     { href: "/profile", label: "Profil", icon: "👤" },
     { href: "/settings", label: "Paramètres", icon: "⚙️" },
@@ -47,19 +55,39 @@ export function MobileNav({ user, profile, onSignOut }: MobileNavProps) {
 
           <nav className="flex-1 space-y-2">
             {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  pathname === item.href
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent hover:text-accent-foreground"
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    pathname === item.href
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+                {item.submenu && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {item.submenu.map((subItem) => (
+                      <Link
+                        key={subItem.href}
+                        href={subItem.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
+                          pathname === subItem.href
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-accent/50 hover:text-accent-foreground"
+                        }`}
+                      >
+                        <span>{subItem.icon}</span>
+                        <span>{subItem.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
 

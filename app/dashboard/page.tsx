@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   const { data: upcomingAttendance } = await supabase
     .from("course_attendance")
     .select("*")
-    .eq("member_id", data.user.id)
+    .eq("user_id", data.user.id)
     .gte("course_date", new Date().toISOString().split("T")[0])
     .order("course_date", { ascending: true })
     .limit(5)

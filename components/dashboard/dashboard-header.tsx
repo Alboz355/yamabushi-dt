@@ -58,12 +58,30 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
             >
               Dashboard
             </Link>
-            <Link
-              href="/booking"
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-            >
-              Planifier
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Planifier
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem asChild>
+                  <Link href="/booking" className="flex items-center gap-2">
+                    <span>➕</span>
+                    Nouveaux cours
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/planifier/mes-cours" className="flex items-center gap-2">
+                    <span>📋</span>
+                    Mes cours planifiés
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link
               href="/progress"
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
@@ -136,7 +154,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                 <Link href="/settings">Paramètres</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/booking">Mes planifications</Link>
+                <Link href="/planifier/mes-cours">Mes cours planifiés</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/progress">Ma progression</Link>

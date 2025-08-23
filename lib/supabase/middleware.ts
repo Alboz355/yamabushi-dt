@@ -1,10 +1,12 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+export async function updateSession(request: NextRequest, response?: NextResponse) {
+  let supabaseResponse =
+    response ||
+    NextResponse.next({
+      request,
+    })
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -24,9 +26,11 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-        supabaseResponse = NextResponse.next({
-          request,
-        })
+        supabaseResponse =
+          response ||
+          NextResponse.next({
+            request,
+          })
         cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
       },
     },
@@ -37,23 +41,34 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/subscription")
-  ) {
+  const pathname = request.nextUrl.pathname
+  const isRootPath = pathname === "/" || pathname.match(/^\/[a-z]{2}$/)
+  const isAuthPath = pathname.includes("/auth")
+  const isSubscriptionPath = pathname.includes("/subscription")
+  const isAdminPath = pathname.includes("/admin")
+
+  if (!isRootPath && !user && !isAuthPath && !isSubscriptionPath) {
     const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
+    const locale = pathname.split("/")[1]
+    if (locale && locale.length === 2) {
+      url.pathname = `/${locale}/auth/login`
+    } else {
+      url.pathname = "/fr/auth/login"
+    }
     return NextResponse.redirect(url)
   }
 
-  if (user && request.nextUrl.pathname.startsWith("/admin")) {
+  if (user && isAdminPath) {
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
 
     if (!profile || profile.role !== "admin") {
       const url = request.nextUrl.clone()
-      url.pathname = "/dashboard"
+      const locale = pathname.split("/")[1]
+      if (locale && locale.length === 2) {
+        url.pathname = `/${locale}/dashboard`
+      } else {
+        url.pathname = "/fr/dashboard"
+      }
       return NextResponse.redirect(url)
     }
   }

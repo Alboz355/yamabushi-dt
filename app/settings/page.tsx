@@ -17,8 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
+import { useTranslation } from "@/lib/i18n/context"
 
 export default function SettingsPage() {
+  const { t, language, setLanguage } = useTranslation()
+
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -34,8 +37,6 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
-
-  const [selectedLanguage, setSelectedLanguage] = useState("fr")
 
   const { toast } = useToast()
   const router = useRouter()
@@ -53,17 +54,12 @@ export default function SettingsPage() {
 
       setUser(user)
 
-      // Get profile
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
       setProfile(profileData)
 
-      // Get MFA factors
       const { data: factors } = await supabase.auth.mfa.listFactors()
       setMfaFactors(factors?.totp || [])
-
-      const savedLanguage = localStorage.getItem("yamabushi-language") || "fr"
-      setSelectedLanguage(savedLanguage)
 
       setLoading(false)
     }
@@ -79,7 +75,6 @@ export default function SettingsPage() {
       const { data: existingFactors } = await supabase.auth.mfa.listFactors()
       console.log("[v0] Existing factors:", existingFactors)
 
-      // If there are existing unverified factors, clean them up
       if (existingFactors?.all && existingFactors.all.length > 0) {
         for (const factor of existingFactors.all) {
           if (factor.status === "unverified") {
@@ -89,8 +84,8 @@ export default function SettingsPage() {
             console.log("[v0] Found existing verified factor, refreshing list")
             setMfaFactors(existingFactors?.totp || [])
             toast({
-              title: "MFA déjà activé",
-              description: "L'authentification à deux facteurs est déjà active sur votre compte",
+              title: t("settings.mfa.alreadyEnabled"),
+              description: t("settings.mfa.alreadyEnabledDescription"),
             })
             return
           }
@@ -126,17 +121,17 @@ export default function SettingsPage() {
         }, 100)
 
         toast({
-          title: "Configuration MFA",
-          description: "Scannez le QR code avec votre application d'authentification",
+          title: t("settings.mfa.configure"),
+          description: t("settings.mfa.scanQRCode"),
         })
       } else {
         console.log("[v0] MFA data structure:", data)
-        throw new Error("Données d'enrollment MFA manquantes")
+        throw new Error(t("settings.mfa.missingData"))
       }
     } catch (error: any) {
       console.log("[v0] MFA enrollment failed:", error)
       toast({
-        title: "Erreur",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       })
@@ -150,7 +145,6 @@ export default function SettingsPage() {
       console.log("[v0] Starting MFA verification with code:", verificationCode)
       console.log("[v0] Factor ID:", factorId)
 
-      // First create a challenge
       const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
         factorId,
       })
@@ -162,7 +156,6 @@ export default function SettingsPage() {
         throw challengeError
       }
 
-      // Then verify with the code
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId,
         challengeId: challengeData.id,
@@ -178,25 +171,23 @@ export default function SettingsPage() {
 
       console.log("[v0] MFA verification successful, refreshing factors")
 
-      // Refresh factors
       const { data: factors } = await supabase.auth.mfa.listFactors()
       console.log("[v0] Updated MFA factors:", factors)
       setMfaFactors(factors?.totp || [])
 
-      // Reset enrollment state
       setQrCode("")
       setSecret("")
       setVerificationCode("")
       setFactorId("")
 
       toast({
-        title: "MFA activé",
-        description: "L'authentification à deux facteurs a été activée avec succès",
+        title: t("settings.mfa.enabled"),
+        description: t("settings.mfa.enabledDescription"),
       })
     } catch (error: any) {
       console.log("[v0] MFA verification failed:", error)
       toast({
-        title: "Erreur de vérification",
+        title: t("settings.mfa.verifyError"),
         description: error.message,
         variant: "destructive",
       })
@@ -209,17 +200,16 @@ export default function SettingsPage() {
 
       if (error) throw error
 
-      // Refresh factors
       const { data: factors } = await supabase.auth.mfa.listFactors()
       setMfaFactors(factors?.totp || [])
 
       toast({
-        title: "MFA désactivé",
-        description: "L'authentification à deux facteurs a été désactivée",
+        title: t("settings.mfa.disabled"),
+        description: t("settings.mfa.disabledDescription"),
       })
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       })
@@ -231,8 +221,8 @@ export default function SettingsPage() {
 
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Erreur",
-        description: "Les mots de passe ne correspondent pas",
+        title: t("common.error"),
+        description: t("settings.password.mismatch"),
         variant: "destructive",
       })
       return
@@ -240,8 +230,8 @@ export default function SettingsPage() {
 
     if (newPassword.length < 6) {
       toast({
-        title: "Erreur",
-        description: "Le mot de passe doit contenir au moins 6 caractères",
+        title: t("common.error"),
+        description: t("settings.password.minLength"),
         variant: "destructive",
       })
       return
@@ -252,7 +242,6 @@ export default function SettingsPage() {
     try {
       console.log("[v0] Starting password change...")
 
-      // First verify current password by attempting to sign in
       const { error: verifyError } = await supabase.auth.signInWithPassword({
         email: user?.email || "",
         password: currentPassword,
@@ -260,12 +249,11 @@ export default function SettingsPage() {
 
       if (verifyError) {
         console.log("[v0] Current password verification failed:", verifyError)
-        throw new Error("Mot de passe actuel incorrect")
+        throw new Error(t("settings.password.incorrect"))
       }
 
       console.log("[v0] Current password verified, updating to new password...")
 
-      // Update password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
@@ -277,21 +265,20 @@ export default function SettingsPage() {
 
       console.log("[v0] Password updated successfully")
 
-      // Reset form
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
       setShowPasswordChange(false)
 
       toast({
-        title: "Mot de passe modifié",
-        description: "Votre mot de passe a été modifié avec succès",
+        title: t("settings.password.changed"),
+        description: t("settings.password.changedDescription"),
       })
     } catch (error: any) {
       console.log("[v0] Password change error:", error)
       toast({
-        title: "Erreur",
-        description: error.message || "Impossible de modifier le mot de passe",
+        title: t("common.error"),
+        description: error.message || t("settings.password.changeFailed"),
         variant: "destructive",
       })
     } finally {
@@ -306,17 +293,13 @@ export default function SettingsPage() {
     setConfirmPassword("")
   }
 
-  const handleLanguageChange = (language: string) => {
-    setSelectedLanguage(language)
-    localStorage.setItem("yamabushi-language", language)
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage as "fr" | "de" | "it" | "en")
 
     toast({
-      title: "Langue modifiée",
-      description: `La langue a été changée vers ${getLanguageName(language)}`,
+      title: t("settings.language.changed"),
+      description: `${t("settings.language.changedTo")} ${getLanguageName(newLanguage)}`,
     })
-
-    // Reload the page to apply language changes
-    window.location.reload()
   }
 
   const getLanguageName = (code: string) => {
@@ -330,7 +313,7 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Chargement...</div>
+    return <div className="flex items-center justify-center min-h-screen">{t("common.loading")}</div>
   }
 
   if (!user) return null
@@ -342,16 +325,16 @@ export default function SettingsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold">Paramètres</h1>
-            <p className="text-muted-foreground">Gérez vos préférences et paramètres de sécurité</p>
+            <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
+            <p className="text-muted-foreground">{t("settings.description")}</p>
           </div>
 
           <Tabs defaultValue="security" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="security">Sécurité</TabsTrigger>
-              <TabsTrigger value="profile">Profil</TabsTrigger>
-              <TabsTrigger value="language">Langue</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              <TabsTrigger value="security">{t("settings.tabs.security")}</TabsTrigger>
+              <TabsTrigger value="profile">{t("settings.tabs.profile")}</TabsTrigger>
+              <TabsTrigger value="language">{t("settings.tabs.language")}</TabsTrigger>
+              <TabsTrigger value="notifications">{t("settings.tabs.notifications")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="security" className="space-y-6">
@@ -366,11 +349,9 @@ export default function SettingsPage() {
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                       />
                     </svg>
-                    Authentification à deux facteurs (MFA)
+                    {t("settings.mfa.title")}
                   </CardTitle>
-                  <CardDescription>
-                    Ajoutez une couche de sécurité supplémentaire à votre compte avec l'authentification TOTP
-                  </CardDescription>
+                  <CardDescription>{t("settings.mfa.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {mfaFactors.length > 0 ? (
@@ -386,9 +367,9 @@ export default function SettingsPage() {
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            MFA activé
+                            {t("settings.mfa.enabled")}
                           </span>
-                          <Badge variant="secondary">Actif</Badge>
+                          <Badge variant="secondary">{t("settings.mfa.active")}</Badge>
                         </AlertDescription>
                       </Alert>
 
@@ -397,11 +378,11 @@ export default function SettingsPage() {
                           <div>
                             <p className="font-medium">{factor.friendly_name || "Authenticator App"}</p>
                             <p className="text-sm text-muted-foreground">
-                              Créé le {new Date(factor.created_at).toLocaleDateString()}
+                              {t("settings.mfa.createdOn")} {new Date(factor.created_at).toLocaleDateString()}
                             </p>
                           </div>
                           <Button variant="outline" size="sm" onClick={() => unenrollMFA(factor.id)}>
-                            Désactiver
+                            {t("settings.mfa.disable")}
                           </Button>
                         </div>
                       ))}
@@ -409,21 +390,17 @@ export default function SettingsPage() {
                   ) : (
                     <div className="space-y-4">
                       <Alert>
-                        <AlertDescription>
-                          L'authentification à deux facteurs n'est pas activée. Activez-la pour sécuriser votre compte.
-                        </AlertDescription>
+                        <AlertDescription>{t("settings.mfa.notEnabled")}</AlertDescription>
                       </Alert>
 
                       {!qrCode ? (
                         <Button onClick={enrollMFA} disabled={enrolling}>
-                          {enrolling ? "Configuration..." : "Activer MFA"}
+                          {enrolling ? t("settings.mfa.configuring") : t("settings.mfa.enable")}
                         </Button>
                       ) : (
                         <div className="space-y-4">
                           <div className="text-center space-y-4">
-                            <p className="font-medium">
-                              Scannez ce QR code avec votre application d'authentification :
-                            </p>
+                            <p className="font-medium">{t("settings.mfa.scanQRCode")}</p>
                             <div className="flex justify-center">
                               <div className="p-4 bg-white rounded-lg border">
                                 <img
@@ -441,18 +418,16 @@ export default function SettingsPage() {
                               </div>
                             </div>
                             <div className="text-sm text-muted-foreground space-y-2">
-                              <p>Ou entrez manuellement ce secret dans votre app :</p>
+                              <p>{t("settings.mfa.enterSecret")}</p>
                               <div className="bg-muted p-3 rounded-lg">
                                 <code className="text-xs break-all">{secret}</code>
                               </div>
-                              <p className="text-xs">
-                                Applications recommandées : Google Authenticator, Authy, Microsoft Authenticator
-                              </p>
+                              <p className="text-xs">{t("settings.mfa.recommendedApps")}</p>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="verification-code">Code de vérification à 6 chiffres</Label>
+                            <Label htmlFor="verification-code">{t("settings.mfa.verificationCode")}</Label>
                             <Input
                               id="verification-code"
                               placeholder="000000"
@@ -461,9 +436,7 @@ export default function SettingsPage() {
                               maxLength={6}
                               className="text-center text-lg tracking-widest"
                             />
-                            <p className="text-xs text-muted-foreground">
-                              Entrez le code affiché dans votre application d'authentification
-                            </p>
+                            <p className="text-xs text-muted-foreground">{t("settings.mfa.enterCode")}</p>
                           </div>
 
                           <div className="flex gap-2">
@@ -472,7 +445,7 @@ export default function SettingsPage() {
                               disabled={!verificationCode || verificationCode.length !== 6}
                               className="flex-1"
                             >
-                              Vérifier et activer MFA
+                              {t("settings.mfa.verifyAndEnable")}
                             </Button>
                             <Button
                               variant="outline"
@@ -484,7 +457,7 @@ export default function SettingsPage() {
                                 setFactorId("")
                               }}
                             >
-                              Annuler
+                              {t("common.cancel")}
                             </Button>
                           </div>
                         </div>
@@ -496,18 +469,18 @@ export default function SettingsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Mot de passe</CardTitle>
-                  <CardDescription>Modifiez votre mot de passe pour sécuriser votre compte</CardDescription>
+                  <CardTitle>{t("settings.password.title")}</CardTitle>
+                  <CardDescription>{t("settings.password.description")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {!showPasswordChange ? (
                     <Button variant="outline" onClick={() => setShowPasswordChange(true)}>
-                      Changer le mot de passe
+                      {t("settings.password.change")}
                     </Button>
                   ) : (
                     <form onSubmit={handlePasswordChange} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="current-password">Mot de passe actuel</Label>
+                        <Label htmlFor="current-password">{t("settings.password.current")}</Label>
                         <Input
                           id="current-password"
                           type="password"
@@ -518,7 +491,7 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                        <Label htmlFor="new-password">{t("settings.password.new")}</Label>
                         <Input
                           id="new-password"
                           type="password"
@@ -528,12 +501,10 @@ export default function SettingsPage() {
                           onChange={(e) => setNewPassword(e.target.value)}
                           className="border-2 focus:border-primary"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Le mot de passe doit contenir au moins 6 caractères
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t("settings.password.minLengthRequirement")}</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
+                        <Label htmlFor="confirm-password">{t("settings.password.confirm")}</Label>
                         <Input
                           id="confirm-password"
                           type="password"
@@ -548,7 +519,7 @@ export default function SettingsPage() {
                           type="submit"
                           disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
                         >
-                          {changingPassword ? "Modification..." : "Modifier le mot de passe"}
+                          {changingPassword ? t("settings.password.changing") : t("settings.password.change")}
                         </Button>
                         <Button
                           type="button"
@@ -556,7 +527,7 @@ export default function SettingsPage() {
                           onClick={handleCancelPasswordChange}
                           disabled={changingPassword}
                         >
-                          Annuler
+                          {t("common.cancel")}
                         </Button>
                       </div>
                     </form>
@@ -568,25 +539,25 @@ export default function SettingsPage() {
             <TabsContent value="profile" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Informations du profil</CardTitle>
-                  <CardDescription>Gérez vos informations personnelles</CardDescription>
+                  <CardTitle>{t("settings.profile.title")}</CardTitle>
+                  <CardDescription>{t("settings.profile.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="first-name">Prénom</Label>
+                      <Label htmlFor="first-name">{t("settings.profile.firstName")}</Label>
                       <Input id="first-name" value={profile?.first_name || ""} readOnly />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="last-name">Nom</Label>
+                      <Label htmlFor="last-name">{t("settings.profile.lastName")}</Label>
                       <Input id="last-name" value={profile?.last_name || ""} readOnly />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("settings.profile.email")}</Label>
                     <Input id="email" value={user.email || ""} readOnly />
                   </div>
-                  <Button variant="outline">Modifier le profil</Button>
+                  <Button variant="outline">{t("settings.profile.edit")}</Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -603,74 +574,72 @@ export default function SettingsPage() {
                         d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
                       />
                     </svg>
-                    Langue de l'interface
+                    {t("settings.language.title")}
                   </CardTitle>
-                  <CardDescription>Choisissez la langue d'affichage de l'application</CardDescription>
+                  <CardDescription>{t("settings.language.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="language-select">Langue préférée</Label>
-                      <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                      <Label htmlFor="language-select">{t("settings.language.preferred")}</Label>
+                      <Select value={language} onValueChange={handleLanguageChange}>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sélectionnez une langue" />
+                          <SelectValue placeholder={t("settings.language.select")} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="fr">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">🇫🇷</span>
-                              <span>Français</span>
+                              <span>{t("languages.fr")}</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="de">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">🇩🇪</span>
-                              <span>Deutsch</span>
+                              <span>{t("languages.de")}</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="it">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">🇮🇹</span>
-                              <span>Italiano</span>
+                              <span>{t("languages.it")}</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="en">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">🇬🇧</span>
-                              <span>English</span>
+                              <span>{t("languages.en")}</span>
                             </div>
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-sm text-muted-foreground">
-                        La langue sera appliquée après rechargement de la page
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("settings.language.applied")}</p>
                     </div>
 
                     <Alert>
                       <AlertDescription>
-                        <strong>Langue actuelle :</strong> {getLanguageName(selectedLanguage)}
+                        <strong>{t("settings.language.current")}:</strong> {getLanguageName(language)}
                       </AlertDescription>
                     </Alert>
 
                     <div className="space-y-2">
-                      <h4 className="font-medium">Langues disponibles</h4>
+                      <h4 className="font-medium">{t("settings.language.available")}</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <span>🇫🇷</span>
-                          <span>Français (France)</span>
+                          <span>{t("languages.fr")}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span>🇩🇪</span>
-                          <span>Deutsch (Deutschland)</span>
+                          <span>{t("languages.de")}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span>🇮🇹</span>
-                          <span>Italiano (Italia)</span>
+                          <span>{t("languages.it")}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span>🇬🇧</span>
-                          <span>English (United Kingdom)</span>
+                          <span>{t("languages.en")}</span>
                         </div>
                       </div>
                     </div>
@@ -682,23 +651,23 @@ export default function SettingsPage() {
             <TabsContent value="notifications" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Préférences de notification</CardTitle>
-                  <CardDescription>Choisissez comment vous souhaitez être notifié</CardDescription>
+                  <CardTitle>{t("settings.notifications.title")}</CardTitle>
+                  <CardDescription>{t("settings.notifications.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Notifications par email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recevez des notifications par email pour les cours et événements
-                      </p>
+                      <Label>{t("settings.notifications.email")}</Label>
+                      <p className="text-sm text-muted-foreground">{t("settings.notifications.emailDescription")}</p>
                     </div>
                     <Switch />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Rappels de cours</Label>
-                      <p className="text-sm text-muted-foreground">Recevez des rappels avant vos cours programmés</p>
+                      <Label>{t("settings.notifications.courseReminders")}</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {t("settings.notifications.courseRemindersDescription")}
+                      </p>
                     </div>
                     <Switch />
                   </div>
