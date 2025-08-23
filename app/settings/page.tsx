@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { useTranslation } from "@/lib/i18n/context"
+import { ThemeSelector } from "@/components/theme/theme-selector"
 
 export default function SettingsPage() {
   const { t, language, setLanguage } = useTranslation()
@@ -330,9 +331,10 @@ export default function SettingsPage() {
           </div>
 
           <Tabs defaultValue="security" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="security">{t("settings.tabs.security")}</TabsTrigger>
               <TabsTrigger value="profile">{t("settings.tabs.profile")}</TabsTrigger>
+              <TabsTrigger value="theme">Thème</TabsTrigger>
               <TabsTrigger value="language">{t("settings.tabs.language")}</TabsTrigger>
               <TabsTrigger value="notifications">{t("settings.tabs.notifications")}</TabsTrigger>
             </TabsList>
@@ -560,6 +562,10 @@ export default function SettingsPage() {
                   <Button variant="outline">{t("settings.profile.edit")}</Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="theme" className="space-y-6">
+              <ThemeSelector />
             </TabsContent>
 
             <TabsContent value="language" className="space-y-6">

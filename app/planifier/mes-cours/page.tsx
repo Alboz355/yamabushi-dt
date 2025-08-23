@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { CalendarDays, Clock, MapPin, User, X } from "lucide-react"
+import { CalendarDays, Clock, MapPin, User, X, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 
 interface PlannedCourse {
@@ -182,6 +182,17 @@ export default function MesCoursPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/dashboard")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Retour au Dashboard
+        </Button>
+      </div>
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Mes Cours Planifiés</h1>
         <p className="text-muted-foreground">Gérez vos cours planifiés et annulez facilement si nécessaire</p>

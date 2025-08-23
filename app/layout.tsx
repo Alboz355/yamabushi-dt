@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Montserrat, Open_Sans } from "next/font/google"
 import "./globals.css"
 import { TranslationProvider } from "@/lib/i18n/context"
+import { ThemeProvider } from "@/lib/theme/theme-provider"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -32,7 +33,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${montserrat.variable} ${openSans.variable} antialiased`}>
       <body className="font-sans pb-16 md:pb-0">
-        <TranslationProvider>{children}</TranslationProvider>
+        <ThemeProvider defaultTheme="system" storageKey="yamabushi-ui-theme">
+          <TranslationProvider>{children}</TranslationProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -7,9 +7,12 @@ import { AdminHeader } from "./admin-header"
 import { AdminMessages } from "./admin-messages"
 import { AdminUserManagement } from "./admin-user-management"
 import { AdminStats } from "./admin-stats"
+import { AdminAnalytics } from "./admin-analytics"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { User } from "@supabase/supabase-js"
 import { useState } from "react"
+import { AutomatedReports } from "./automated-reports"
+import { InstructorManagement } from "./instructor-management"
 
 interface AdminDashboardProps {
   user: User
@@ -65,11 +68,14 @@ Date d'export,${new Date().toLocaleDateString()}`
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
+            <TabsTrigger value="analytics">Analyses</TabsTrigger>
             <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+            <TabsTrigger value="instructors">Instructeurs</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="courses">Cours</TabsTrigger>
+            <TabsTrigger value="reports">Rapports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -124,13 +130,35 @@ Date d'export,${new Date().toLocaleDateString()}`
                   >
                     💰 Gérer les abonnements
                   </Button>
+                  <Button
+                    className="w-full justify-start bg-transparent"
+                    variant="outline"
+                    onClick={() => setActiveTab("analytics")}
+                  >
+                    📈 Voir les analyses détaillées
+                  </Button>
+                  <Button
+                    className="w-full justify-start bg-transparent"
+                    variant="outline"
+                    onClick={() => setActiveTab("reports")}
+                  >
+                    📋 Voir les rapports automatisés
+                  </Button>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
+          <TabsContent value="analytics">
+            <AdminAnalytics initialStats={stats} />
+          </TabsContent>
+
           <TabsContent value="users">
             <AdminUserManagement />
+          </TabsContent>
+
+          <TabsContent value="instructors">
+            <InstructorManagement />
           </TabsContent>
 
           <TabsContent value="messages">
@@ -147,6 +175,10 @@ Date d'export,${new Date().toLocaleDateString()}`
                 <p className="text-muted-foreground">Fonctionnalité en développement...</p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <AutomatedReports />
           </TabsContent>
         </Tabs>
       </main>

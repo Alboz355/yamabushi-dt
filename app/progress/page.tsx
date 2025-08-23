@@ -5,6 +5,8 @@ import { ProgressOverview } from "@/components/progress/progress-overview"
 import { DisciplineProgress } from "@/components/progress/discipline-progress"
 import { AttendanceStats } from "@/components/progress/attendance-stats"
 import { ProgressGoals } from "@/components/progress/progress-goals"
+import { TrainingCalendar } from "@/components/progress/training-calendar"
+import { InstructorNotes } from "@/components/progress/instructor-notes"
 
 export default async function ProgressPage() {
   const supabase = await createClient()
@@ -56,6 +58,7 @@ export default async function ProgressPage() {
           description: `Félicitations ! Vous avez suivi ${courses.length} cours de ${disciplineName}`,
           achieved_at: courses[0].course_date,
           member_id: data.user.id,
+          discipline_name: disciplineName,
         })
       }
     })
@@ -93,7 +96,12 @@ export default async function ProgressPage() {
               courseHistory={courseAttendance || []}
               disciplineStats={disciplineStats || []}
               milestones={milestones || []}
+              userProfile={profile}
             />
+
+            <TrainingCalendar courseHistory={courseAttendance || []} userId={data.user.id} />
+
+            <InstructorNotes userId={data.user.id} />
 
             <DisciplineProgress
               userId={data.user.id}

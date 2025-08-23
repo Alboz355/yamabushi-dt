@@ -58,6 +58,9 @@ export function UpcomingClasses({ bookings }: UpcomingClassesProps) {
     return diffDays
   }
 
+  const displayedBookings = bookings.slice(0, 2)
+  const hasMoreBookings = bookings.length > 2
+
   return (
     <Card>
       <CardHeader>
@@ -76,7 +79,7 @@ export function UpcomingClasses({ bookings }: UpcomingClassesProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {bookings.map((booking) => {
+          {displayedBookings.map((booking) => {
             const daysUntil = booking.course_date ? getDaysUntil(booking.course_date) : null
 
             return (
@@ -123,7 +126,12 @@ export function UpcomingClasses({ bookings }: UpcomingClassesProps) {
             )
           })}
 
-          <div className="pt-4">
+          <div className="pt-4 space-y-2">
+            {hasMoreBookings && (
+              <Button asChild variant="outline" className="w-full bg-transparent">
+                <Link href="/planifier/mes-cours">Voir tout ({bookings.length} cours)</Link>
+              </Button>
+            )}
             <Button asChild variant="outline" className="w-full bg-transparent">
               <Link href="/booking">Gérer mes planifications</Link>
             </Button>

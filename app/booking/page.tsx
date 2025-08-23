@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, MapPin, Users, Star, Eye } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, Star, Eye, Repeat } from "lucide-react"
 import { format, addDays } from "date-fns"
 import { fr } from "date-fns/locale"
 import { BottomNav } from "@/components/mobile/bottom-nav"
 import { toast } from "sonner"
+import { RecurringBookingModal } from "@/components/booking/recurring-booking-modal"
 
 export default function BookingPage() {
   const [user, setUser] = useState(null)
@@ -25,6 +26,7 @@ export default function BookingPage() {
     club: "all",
     date: format(new Date(), "yyyy-MM-dd"),
   })
+  const [recurringModal, setRecurringModal] = useState({ isOpen: false, course: null })
 
   const supabase = createClient()
 
@@ -592,6 +594,14 @@ export default function BookingPage() {
     }
   }
 
+  const openRecurringModal = (course) => {
+    setRecurringModal({ isOpen: true, course })
+  }
+
+  const closeRecurringModal = () => {
+    setRecurringModal({ isOpen: false, course: null })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
@@ -823,18 +833,29 @@ export default function BookingPage() {
                       <span className="text-xs text-muted-foreground">90 min</span>
                     </div>
 
-                    <Button
-                      size="lg"
-                      onClick={() => toggleAttendance(course)}
-                      className={`min-w-[140px] font-semibold transition-all duration-200 ${
-                        course.userAttending ? "bg-green-600 hover:bg-green-700 scale-105" : ""
-                      }`}
-                      style={{
-                        backgroundColor: course.userAttending ? undefined : course.discipline.color,
-                      }}
-                    >
-                      {course.userAttending ? "✅ J'y serai !" : "👋 J'y serai !"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRecurringModal(course)}
+                        className="min-w-[100px] font-semibold"
+                      >
+                        <Repeat className="h-4 w-4 mr-1" />
+                        Récurrent
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={() => toggleAttendance(course)}
+                        className={`min-w-[140px] font-semibold transition-all duration-200 ${
+                          course.userAttending ? "bg-green-600 hover:bg-green-700 scale-105" : ""
+                        }`}
+                        style={{
+                          backgroundColor: course.userAttending ? undefined : course.discipline.color,
+                        }}
+                      >
+                        {course.userAttending ? "✅ J'y serai !" : "👋 J'y serai !"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -842,6 +863,15 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
+
+      {recurringModal.course && (
+        <RecurringBookingModal
+          isOpen={recurringModal.isOpen}
+          onClose={closeRecurringModal}
+          course={recurringModal.course}
+          user={user}
+        />
+      )}
 
       <BottomNav />
     </div>

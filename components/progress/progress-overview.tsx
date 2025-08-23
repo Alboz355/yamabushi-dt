@@ -1,15 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { SocialShare } from "./social-share"
 
 interface ProgressOverviewProps {
   userId: string
   courseHistory: any[]
   disciplineStats: any[]
   milestones: any[]
+  userProfile?: any
 }
 
-export function ProgressOverview({ userId, courseHistory, disciplineStats, milestones }: ProgressOverviewProps) {
+export function ProgressOverview({
+  userId,
+  courseHistory,
+  disciplineStats,
+  milestones,
+  userProfile,
+}: ProgressOverviewProps) {
   // Calculate overall stats from real data
   const totalClasses = courseHistory.length
   const thisMonthClasses = disciplineStats.reduce((sum, stat) => sum + (stat.courses_this_month || 0), 0)
@@ -33,6 +41,42 @@ export function ProgressOverview({ userId, courseHistory, disciplineStats, miles
   // Recent milestones
   const recentMilestones = milestones.slice(0, 3)
 
+  const shareableAchievements = []
+
+  // Major milestones worth sharing
+  if (totalClasses >= 50) {
+    shareableAchievements.push({
+      type: "milestone" as const,
+      title: `${totalClasses} cours suivis`,
+      description: `Un parcours impressionnant de ${totalClasses} cours dans les arts martiaux !`,
+      value: totalClasses,
+      date: new Date().toISOString(),
+    })
+  }
+
+  // Discipline mastery
+  if (mostPracticedDiscipline.count >= 20) {
+    shareableAchievements.push({
+      type: "milestone" as const,
+      title: `Expert en ${mostPracticedDiscipline.name}`,
+      description: `${mostPracticedDiscipline.count} cours de ${mostPracticedDiscipline.name} complétés !`,
+      discipline: mostPracticedDiscipline.name,
+      value: mostPracticedDiscipline.count,
+      date: new Date().toISOString(),
+    })
+  }
+
+  // Multi-discipline achievement
+  if (activeDisciplines >= 5) {
+    shareableAchievements.push({
+      type: "milestone" as const,
+      title: "Pratiquant polyvalent",
+      description: `Maîtrise de ${activeDisciplines} disciplines différentes !`,
+      value: activeDisciplines,
+      date: new Date().toISOString(),
+    })
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
@@ -45,6 +89,20 @@ export function ProgressOverview({ userId, courseHistory, disciplineStats, miles
             <div className="text-center p-4 bg-primary/5 rounded-lg">
               <div className="text-2xl font-bold text-primary">{totalClasses}</div>
               <div className="text-sm text-muted-foreground">Cours suivis</div>
+              {totalClasses >= 10 && totalClasses % 10 === 0 && (
+                <div className="mt-2">
+                  <SocialShare
+                    achievement={{
+                      type: "milestone",
+                      title: `${totalClasses} cours suivis`,
+                      description: `Un parcours impressionnant de ${totalClasses} cours dans les arts martiaux !`,
+                      value: totalClasses,
+                      date: new Date().toISOString(),
+                    }}
+                    userProfile={userProfile}
+                  />
+                </div>
+              )}
             </div>
             <div className="text-center p-4 bg-accent/5 rounded-lg">
               <div className="text-2xl font-bold text-accent">{Math.round(totalHours)}h</div>
@@ -71,6 +129,20 @@ export function ProgressOverview({ userId, courseHistory, disciplineStats, miles
               </span>
             </div>
             <Progress value={(activeDisciplines / totalDisciplines) * 100} className="h-2" />
+            {activeDisciplines >= 5 && (
+              <div className="pt-2">
+                <SocialShare
+                  achievement={{
+                    type: "milestone",
+                    title: "Pratiquant polyvalent",
+                    description: `Maîtrise de ${activeDisciplines} disciplines différentes !`,
+                    value: activeDisciplines,
+                    date: new Date().toISOString(),
+                  }}
+                  userProfile={userProfile}
+                />
+              </div>
+            )}
           </div>
 
           <div className="pt-2 border-t">
@@ -78,6 +150,21 @@ export function ProgressOverview({ userId, courseHistory, disciplineStats, miles
               <span className="text-sm text-muted-foreground">Discipline favorite</span>
               <Badge variant="secondary">{mostPracticedDiscipline.name}</Badge>
             </div>
+            {mostPracticedDiscipline.count >= 15 && (
+              <div className="mt-2">
+                <SocialShare
+                  achievement={{
+                    type: "milestone",
+                    title: `Expert en ${mostPracticedDiscipline.name}`,
+                    description: `${mostPracticedDiscipline.count} cours de ${mostPracticedDiscipline.name} complétés !`,
+                    discipline: mostPracticedDiscipline.name,
+                    value: mostPracticedDiscipline.count,
+                    date: new Date().toISOString(),
+                  }}
+                  userProfile={userProfile}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -111,13 +198,25 @@ export function ProgressOverview({ userId, courseHistory, disciplineStats, miles
           {recentMilestones.length > 0 && (
             <div className="mt-4 pt-4 border-t">
               <h4 className="text-sm font-semibold mb-2">🏆 Dernières réalisations</h4>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {recentMilestones.map((milestone, index) => (
-                  <div key={index} className="text-xs bg-accent/10 rounded px-2 py-1">
-                    <span className="font-medium">{milestone.milestone_name}</span>
-                    {milestone.discipline_name && (
-                      <span className="text-muted-foreground"> • {milestone.discipline_name}</span>
-                    )}
+                  <div key={index} className="flex items-center justify-between bg-accent/10 rounded px-3 py-2">
+                    <div className="text-xs">
+                      <span className="font-medium">{milestone.title}</span>
+                      {milestone.discipline_name && (
+                        <span className="text-muted-foreground"> • {milestone.discipline_name}</span>
+                      )}
+                    </div>
+                    <SocialShare
+                      achievement={{
+                        type: "milestone",
+                        title: milestone.title,
+                        description: milestone.description,
+                        discipline: milestone.discipline_name,
+                        date: milestone.achieved_at,
+                      }}
+                      userProfile={userProfile}
+                    />
                   </div>
                 ))}
               </div>

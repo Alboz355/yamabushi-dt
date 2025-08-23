@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { MobileNav } from "@/components/mobile/mobile-nav"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
 
 interface DashboardHeaderProps {
   user: User
@@ -124,57 +125,60 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
             )}
           </nav>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full">
-                <Avatar className="h-8 w-8 md:h-10 md:w-10">
-                  <AvatarImage src={profile?.profile_image_url || "/placeholder.svg"} alt="Profile" />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs md:text-sm">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {profile?.first_name && profile?.last_name
-                      ? `${profile.first_name} ${profile.last_name}`
-                      : "Membre"}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">Mon profil</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">Paramètres</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/planifier/mes-cours">Mes cours planifiés</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/progress">Ma progression</Link>
-              </DropdownMenuItem>
-              {isAdmin && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="text-orange-600">
-                      Administration
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                Se déconnecter
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full">
+                  <Avatar className="h-8 w-8 md:h-10 md:w-10">
+                    <AvatarImage src={profile?.profile_image_url || "/placeholder.svg"} alt="Profile" />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs md:text-sm">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {profile?.first_name && profile?.last_name
+                        ? `${profile.first_name} ${profile.last_name}`
+                        : "Membre"}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Mon profil</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">Paramètres</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/planifier/mes-cours">Mes cours planifiés</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/progress">Ma progression</Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="text-orange-600">
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  Se déconnecter
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>
