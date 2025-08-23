@@ -25,6 +25,7 @@ export function MobileNav({ user, profile, onSignOut }: MobileNavProps) {
     { href: "/booking", label: "Réservations", icon: "📅" },
     { href: "/progress", label: "Progression", icon: "📈" },
     { href: "/profile", label: "Profil", icon: "👤" },
+    { href: "/settings", label: "Paramètres", icon: "⚙️" },
     ...(profile?.role === "admin" ? [{ href: "/admin", label: "Admin", icon: "⚙️" }] : []),
   ]
 
