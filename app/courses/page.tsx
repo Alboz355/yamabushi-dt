@@ -295,7 +295,7 @@ export default function CoursesPage() {
         course.currentBookings += 1
         course.availableSpots -= 1
         alert(
-          `✅ Cours "${course.discipline.name}" réservé avec succès!\n📅 ${format(new Date(course.date), "EEEE d MMMM", { locale: fr })} à ${course.startTime}\n🏢 ${course.club.name}`,
+          `✅ Cours "${course.discipline.name}" planifié avec succès!\n📅 ${format(new Date(course.date), "EEEE d MMMM", { locale: fr })} à ${course.startTime}\n🏢 ${course.club.name}`,
         )
       }
       setBookingLoading(null)
@@ -321,7 +321,7 @@ export default function CoursesPage() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-3">
-            🥋 Réservation de Cours
+            🥋 Planification de Cours
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Découvrez nos {yamabushiDisciplines.length} disciplines dans {yamabushiClubs.length} clubs à travers la
@@ -333,7 +333,7 @@ export default function CoursesPage() {
           <Alert className="mb-6 border-red-200 bg-red-50/80 backdrop-blur-sm">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <AlertDescription className="text-red-800 font-medium">
-              ⚠️ Réservation suspendue: Vous avez manqué {bookingStatus.noShowCount} cours récemment. Contactez
+              ⚠️ Planification suspendue: Vous avez manqué {bookingStatus.noShowCount} cours récemment. Contactez
               l'administration pour réactiver votre compte.
             </AlertDescription>
           </Alert>
@@ -561,12 +561,12 @@ export default function CoursesPage() {
                         {bookingLoading === course.id ? (
                           <span className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Réservation...
+                            Planification...
                           </span>
                         ) : course.availableSpots === 0 ? (
                           "❌ Complet"
                         ) : (
-                          "✅ Réserver"
+                          "✅ Planifier"
                         )}
                       </Button>
                     </div>

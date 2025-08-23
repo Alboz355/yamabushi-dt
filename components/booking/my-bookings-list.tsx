@@ -145,7 +145,7 @@ export function MyBookingsList({ bookings, userId }: MyBookingsListProps) {
             </div>
             <div>
               <span className="text-muted-foreground">Prix:</span>
-              <p className="font-medium text-primary">{classInfo?.price ? `${classInfo.price}€` : "Gratuit"}</p>
+              <p className="text-medium text-primary">{classInfo?.price ? `${classInfo.price}€` : "Gratuit"}</p>
             </div>
           </div>
 
@@ -200,10 +200,10 @@ export function MyBookingsList({ bookings, userId }: MyBookingsListProps) {
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <h3 className="font-serif text-xl text-primary mb-2">Aucune réservation</h3>
-            <p className="text-muted-foreground mb-4">Vous n'avez pas encore réservé de cours.</p>
+            <h3 className="font-serif text-xl text-primary mb-2">Aucune planification</h3>
+            <p className="text-muted-foreground mb-4">Vous n'avez pas encore planifié de cours.</p>
             <Button asChild>
-              <Link href="/booking">Réserver un cours</Link>
+              <Link href="/booking">Planifier un cours</Link>
             </Button>
           </div>
         </CardContent>
@@ -226,7 +226,7 @@ export function MyBookingsList({ bookings, userId }: MyBookingsListProps) {
               <div className="text-center">
                 <p className="text-muted-foreground mb-4">Aucun cours à venir.</p>
                 <Button asChild>
-                  <Link href="/booking">Réserver un cours</Link>
+                  <Link href="/booking">Planifier un cours</Link>
                 </Button>
               </div>
             </CardContent>
@@ -255,7 +255,7 @@ export function MyBookingsList({ bookings, userId }: MyBookingsListProps) {
           <Card>
             <CardContent className="py-8">
               <div className="text-center">
-                <p className="text-muted-foreground">Aucune réservation annulée.</p>
+                <p className="text-muted-foreground">Aucune planification annulée.</p>
               </div>
             </CardContent>
           </Card>

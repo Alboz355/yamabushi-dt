@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Clock, Calendar, User, TrendingUp } from "lucide-react"
 
 interface CourseRecommendation {
@@ -124,15 +123,13 @@ export function CourseRecommendations({ userId }: CourseRecommendationsProps) {
                       {rec.instructor}
                     </div>
                   </div>
+                  <div className="text-xs text-muted-foreground">📍 {rec.club_name}</div>
                 </div>
                 <Badge variant="secondary" className="text-xs">
                   Score: {rec.recommendation_score}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mb-2">{rec.reason}</p>
-              <Button size="sm" variant="outline" className="w-full text-xs bg-transparent">
-                Réserver ce cours
-              </Button>
+              <p className="text-xs text-muted-foreground">{rec.reason}</p>
             </div>
           ))}
         </div>

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
@@ -27,13 +28,14 @@ export default function SettingsPage() {
   const [secret, setSecret] = useState<string>("")
   const [verificationCode, setVerificationCode] = useState("")
   const [factorId, setFactorId] = useState<string>("")
-  const [challengeId, setChallengeId] = useState<string>("")
 
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
+
+  const [selectedLanguage, setSelectedLanguage] = useState("fr")
 
   const { toast } = useToast()
   const router = useRouter()
@@ -59,6 +61,9 @@ export default function SettingsPage() {
       // Get MFA factors
       const { data: factors } = await supabase.auth.mfa.listFactors()
       setMfaFactors(factors?.totp || [])
+
+      const savedLanguage = localStorage.getItem("yamabushi-language") || "fr"
+      setSelectedLanguage(savedLanguage)
 
       setLoading(false)
     }
@@ -301,6 +306,29 @@ export default function SettingsPage() {
     setConfirmPassword("")
   }
 
+  const handleLanguageChange = (language: string) => {
+    setSelectedLanguage(language)
+    localStorage.setItem("yamabushi-language", language)
+
+    toast({
+      title: "Langue modifiée",
+      description: `La langue a été changée vers ${getLanguageName(language)}`,
+    })
+
+    // Reload the page to apply language changes
+    window.location.reload()
+  }
+
+  const getLanguageName = (code: string) => {
+    const languages = {
+      fr: "Français",
+      de: "Deutsch",
+      it: "Italiano",
+      en: "English",
+    }
+    return languages[code as keyof typeof languages] || "Français"
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Chargement...</div>
   }
@@ -319,9 +347,10 @@ export default function SettingsPage() {
           </div>
 
           <Tabs defaultValue="security" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="security">Sécurité</TabsTrigger>
               <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="language">Langue</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
 
@@ -562,6 +591,94 @@ export default function SettingsPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="language" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                      />
+                    </svg>
+                    Langue de l'interface
+                  </CardTitle>
+                  <CardDescription>Choisissez la langue d'affichage de l'application</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="language-select">Langue préférée</Label>
+                      <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionnez une langue" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fr">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🇫🇷</span>
+                              <span>Français</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="de">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🇩🇪</span>
+                              <span>Deutsch</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="it">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🇮🇹</span>
+                              <span>Italiano</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="en">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🇬🇧</span>
+                              <span>English</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        La langue sera appliquée après rechargement de la page
+                      </p>
+                    </div>
+
+                    <Alert>
+                      <AlertDescription>
+                        <strong>Langue actuelle :</strong> {getLanguageName(selectedLanguage)}
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Langues disponibles</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span>🇫🇷</span>
+                          <span>Français (France)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>🇩🇪</span>
+                          <span>Deutsch (Deutschland)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>🇮🇹</span>
+                          <span>Italiano (Italia)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>🇬🇧</span>
+                          <span>English (United Kingdom)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="notifications" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -581,7 +698,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Rappels de cours</Label>
-                      <p className="text-sm text-muted-foreground">Recevez des rappels avant vos cours réservés</p>
+                      <p className="text-sm text-muted-foreground">Recevez des rappels avant vos cours programmés</p>
                     </div>
                     <Switch />
                   </div>

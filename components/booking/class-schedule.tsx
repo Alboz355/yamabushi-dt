@@ -146,7 +146,7 @@ export function ClassSchedule({ sessions, userId }: ClassScheduleProps) {
                           size="sm"
                           className={`${availableSpots <= 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          {availableSpots <= 0 ? "Complet" : "Réserver"}
+                          {availableSpots <= 0 ? "Complet" : "Planifier"}
                         </Button>
                       </div>
                     </CardContent>

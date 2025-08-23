@@ -26,9 +26,9 @@ export async function QuickStats({ userId }: QuickStatsProps) {
 
   const stats = [
     {
-      title: "Cours réservés",
+      title: "Cours planifiés", // replaced "Cours réservés" with "Cours planifiés"
       value: totalBookings || 0,
-      description: "Total des réservations",
+      description: "Total des planifications", // replaced "Total des réservations" with "Total des planifications"
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

@@ -22,7 +22,7 @@ export function MobileNav({ user, profile, onSignOut }: MobileNavProps) {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-    { href: "/booking", label: "Réservations", icon: "📅" },
+    { href: "/booking", label: "Planifier", icon: "📅" }, // Changed "Réservations" to "Planifier"
     { href: "/progress", label: "Progression", icon: "📈" },
     { href: "/profile", label: "Profil", icon: "👤" },
     { href: "/settings", label: "Paramètres", icon: "⚙️" },

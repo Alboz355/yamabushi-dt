@@ -48,7 +48,7 @@ export function BookingModal({ session, isOpen, onClose, userId }: BookingModalP
         .single()
 
       if (existingBooking) {
-        setError("Vous avez déjà réservé ce cours")
+        setError("Vous avez déjà planifié ce cours")
         setIsLoading(false)
         return
       }
@@ -77,7 +77,7 @@ export function BookingModal({ session, isOpen, onClose, userId }: BookingModalP
       onClose()
       router.refresh()
     } catch (error: any) {
-      setError(error.message || "Une erreur s'est produite lors de la réservation")
+      setError(error.message || "Une erreur s'est produite lors de la planification")
     } finally {
       setIsLoading(false)
     }
@@ -87,9 +87,9 @@ export function BookingModal({ session, isOpen, onClose, userId }: BookingModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif text-primary text-lg md:text-xl">Confirmer la réservation</DialogTitle>
+          <DialogTitle className="font-serif text-primary text-lg md:text-xl">Confirmer la planification</DialogTitle>
           <DialogDescription className="text-sm">
-            Vérifiez les détails de votre réservation avant de confirmer
+            Vérifiez les détails de votre planification avant de confirmer
           </DialogDescription>
         </DialogHeader>
 
@@ -162,7 +162,7 @@ export function BookingModal({ session, isOpen, onClose, userId }: BookingModalP
             Annuler
           </Button>
           <Button onClick={handleBooking} disabled={isLoading || availableSpots <= 0} className="w-full sm:w-auto">
-            {isLoading ? "Réservation..." : "Confirmer la réservation"}
+            {isLoading ? "Planification..." : "Confirmer la planification"}
           </Button>
         </DialogFooter>
       </DialogContent>

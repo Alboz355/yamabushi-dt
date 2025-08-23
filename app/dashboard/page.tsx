@@ -24,27 +24,67 @@ export default async function DashboardPage() {
   // Get user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
-  // Get upcoming bookings
-  const { data: upcomingBookings } = await supabase
-    .from("bookings")
-    .select(`
-      *,
-      class_sessions (
-        *,
-        classes (
-          name,
-          disciplines (name, color_code),
-          instructors (
-            profiles (first_name, last_name)
-          )
-        )
-      )
-    `)
+  const { data: upcomingAttendance } = await supabase
+    .from("course_attendance")
+    .select("*")
     .eq("member_id", data.user.id)
-    .eq("status", "confirmed")
-    .gte("class_sessions.session_date", new Date().toISOString().split("T")[0])
-    .order("class_sessions.session_date", { ascending: true })
+    .gte("course_date", new Date().toISOString().split("T")[0])
+    .order("course_date", { ascending: true })
     .limit(5)
+
+  console.log("[v0] Dashboard: Querying upcoming attendance for user:", data.user.id)
+  console.log("[v0] Dashboard: Today's date filter:", new Date().toISOString().split("T")[0])
+  console.log("[v0] Dashboard: Upcoming attendance raw data:", upcomingAttendance)
+  console.log("[v0] Dashboard: Number of upcoming attendance records:", upcomingAttendance?.length || 0)
+
+  const upcomingBookings =
+    upcomingAttendance?.map((attendance) => {
+      console.log("[v0] Dashboard: Processing attendance record:", attendance)
+
+      if (attendance.course_id?.startsWith("yamabushi-")) {
+        // Parse Yamabushi course ID: yamabushi-2025-08-24-0-0-0
+        const parts = attendance.course_id.split("-")
+        console.log("[v0] Dashboard: Parsing Yamabushi course ID parts:", parts)
+
+        if (parts.length >= 6) {
+          const year = parts[1]
+          const month = parts[2]
+          const day = parts[3]
+          const courseIndex = Number.parseInt(parts[4])
+
+          // Generate course info based on the pattern used in booking page
+          const disciplines = ["Karaté", "Judo", "Aikido", "Kendo", "Jujitsu"]
+          const instructors = ["Sensei Tanaka", "Sensei Yamamoto", "Sensei Sato", "Sensei Watanabe", "Sensei Nakamura"]
+          const locations = ["Dojo Principal", "Salle 2", "Dojo Extérieur"]
+
+          const discipline = disciplines[courseIndex % disciplines.length]
+          const instructor = instructors[courseIndex % instructors.length]
+          const location = locations[courseIndex % locations.length]
+
+          // Generate time slots
+          const timeSlots = ["09:00", "10:30", "14:00", "15:30", "17:00", "18:30", "20:00"]
+          const time = timeSlots[courseIndex % timeSlots.length]
+
+          const processedCourse = {
+            ...attendance,
+            course_name: `${discipline} - Niveau Intermédiaire`,
+            discipline: discipline,
+            instructor: instructor,
+            location: location,
+            course_date: `${year}-${month}-${day}`,
+            course_time: time,
+            status: "confirmed",
+          }
+
+          console.log("[v0] Dashboard: Processed Yamabushi course:", processedCourse)
+          return processedCourse
+        }
+      }
+      return attendance
+    }) || []
+
+  console.log("[v0] Dashboard: Final upcoming bookings:", upcomingBookings)
+  console.log("[v0] Dashboard: Number of upcoming bookings:", upcomingBookings.length)
 
   return (
     <SubscriptionGuard>
@@ -86,7 +126,7 @@ export default async function DashboardPage() {
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      <span className="text-sm md:text-base">Réserver un cours</span>
+                      <span className="text-sm md:text-base">Planifier un cours</span>
                     </Link>
                   </Button>
                   <Button asChild className="justify-start bg-transparent h-10 md:h-11" variant="outline">

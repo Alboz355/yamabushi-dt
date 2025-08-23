@@ -42,8 +42,8 @@ export default async function MyBookingsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="font-serif font-bold text-3xl text-primary mb-2">Mes réservations</h1>
-          <p className="text-muted-foreground">Gérez vos cours réservés</p>
+          <h1 className="font-serif font-bold text-3xl text-primary mb-2">Mes planifications</h1>
+          <p className="text-muted-foreground">Gérez vos cours planifiés</p>
         </div>
 
         <MyBookingsList bookings={bookings || []} userId={data.user.id} />

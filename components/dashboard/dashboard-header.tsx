@@ -62,7 +62,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
               href="/booking"
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
             >
-              Réservations
+              Planifier
             </Link>
             <Link
               href="/progress"
@@ -136,7 +136,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                 <Link href="/settings">Paramètres</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/booking">Mes réservations</Link>
+                <Link href="/booking">Mes planifications</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/progress">Ma progression</Link>
