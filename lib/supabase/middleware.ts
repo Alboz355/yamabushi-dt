@@ -46,6 +46,7 @@ export async function updateSession(request: NextRequest, response?: NextRespons
   const isAuthPath = pathname.includes("/auth")
   const isSubscriptionPath = pathname.includes("/subscription")
   const isAdminPath = pathname.includes("/admin")
+  const isInstructorPath = pathname.includes("/instructor")
 
   if (!isRootPath && !user && !isAuthPath && !isSubscriptionPath) {
     const url = request.nextUrl.clone()
@@ -59,18 +60,20 @@ export async function updateSession(request: NextRequest, response?: NextRespons
   }
 
   if (user && isAdminPath) {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    const isAdminEmail = user.email === "admin@admin.com" || user.email === "leartshabija0@gmail.com"
 
-    if (!profile || profile.role !== "admin") {
+    if (!isAdminEmail) {
+      // Non-admin trying to access admin routes - redirect to dashboard
       const url = request.nextUrl.clone()
-      const locale = pathname.split("/")[1]
-      if (locale && locale.length === 2) {
-        url.pathname = `/${locale}/dashboard`
-      } else {
-        url.pathname = "/fr/dashboard"
-      }
+      url.pathname = "/dashboard"
+      console.log(`[v0] MIDDLEWARE: Blocking non-admin access to ${pathname}`)
       return NextResponse.redirect(url)
     }
+  }
+
+  if (user && isInstructorPath) {
+    // TODO: Add proper instructor role checking when instructor system is ready
+    console.log(`[v0] MIDDLEWARE: Allowing access to instructor route: ${pathname}`)
   }
 
   // IMPORTANT: Return the supabaseResponse object as-is to maintain cookie sync

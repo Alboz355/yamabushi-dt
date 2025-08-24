@@ -8,6 +8,7 @@ import { AdminMessages } from "./admin-messages"
 import { AdminUserManagement } from "./admin-user-management"
 import { AdminStats } from "./admin-stats"
 import { AdminAnalytics } from "./admin-analytics"
+import { AdminActivityLogs } from "./admin-activity-logs"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { User } from "@supabase/supabase-js"
 import { useState } from "react"
@@ -68,7 +69,7 @@ Date d'export,${new Date().toLocaleDateString()}`
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="analytics">Analyses</TabsTrigger>
             <TabsTrigger value="users">Utilisateurs</TabsTrigger>
@@ -76,6 +77,7 @@ Date d'export,${new Date().toLocaleDateString()}`
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="courses">Cours</TabsTrigger>
             <TabsTrigger value="reports">Rapports</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -144,6 +146,13 @@ Date d'export,${new Date().toLocaleDateString()}`
                   >
                     📋 Voir les rapports automatisés
                   </Button>
+                  <Button
+                    className="w-full justify-start bg-transparent"
+                    variant="outline"
+                    onClick={() => setActiveTab("logs")}
+                  >
+                    🔍 Consulter les logs d'activité
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -179,6 +188,10 @@ Date d'export,${new Date().toLocaleDateString()}`
 
           <TabsContent value="reports">
             <AutomatedReports />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <AdminActivityLogs />
           </TabsContent>
         </Tabs>
       </main>

@@ -20,16 +20,17 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
   const [isRedirecting, setIsRedirecting] = useState(false)
 
   useEffect(() => {
-    if (!loading && isAdmin && !hasRedirectedRef.current) {
-      console.log("[v0] CLIENT: Admin user detected, redirecting to admin dashboard")
+    if (!loading && isAdmin && typeof window !== "undefined" && window.location.pathname !== "/admin") {
+      console.log("[v0] CLIENT: Admin detected in SubscriptionGuard, redirecting to admin panel")
       hasRedirectedRef.current = true
       setIsRedirecting(true)
-      setTimeout(() => {
-        router.push("/admin")
-      }, 500)
-      return
-    }
 
+      // Use window.location.href for immediate redirection that actually works
+      window.location.href = "/admin"
+    }
+  }, [isAdmin, loading])
+
+  useEffect(() => {
     if (!loading && !hasActiveSubscription && !error && !hasRedirectedRef.current && !isRedirecting && !isAdmin) {
       if (retryCountRef.current < maxRetries) {
         console.log(
@@ -48,10 +49,12 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
           router.push("/subscription")
         }, 500)
       }
-    } else if (hasActiveSubscription) {
-      console.log("[v0] CLIENT: Active subscription found, resetting retry count")
+    } else if (hasActiveSubscription || isAdmin) {
+      console.log("[v0] CLIENT: Active subscription or admin found, resetting retry count")
       retryCountRef.current = 0
-      hasRedirectedRef.current = false
+      if (!isAdmin) {
+        hasRedirectedRef.current = false
+      }
       setIsRedirecting(false)
     }
   }, [hasActiveSubscription, loading, error, router, refetch, isRedirecting, isAdmin])

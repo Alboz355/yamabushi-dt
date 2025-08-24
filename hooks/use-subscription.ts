@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 
 interface Subscription {
   id: string
@@ -17,6 +18,7 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const router = useRouter()
 
   const checkSubscription = useCallback(async () => {
     try {
@@ -42,19 +44,27 @@ export function useSubscription() {
       console.log("[v0] CLIENT: Checking subscription for user:", user.id)
       console.log("[v0] CLIENT: User email:", user.email)
 
-      console.log("[v0] CLIENT: Querying profiles table for role...")
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+      let userIsAdmin = false
+      try {
+        console.log("[v0] CLIENT: Checking admin status via API...")
+        const adminResponse = await fetch("/api/admin/users")
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json()
+          const currentUser = adminData.users?.find((u: any) => u.id === user.id)
+          userIsAdmin = currentUser?.role === "admin"
+          console.log("[v0] CLIENT: Admin check via API successful:", userIsAdmin)
+        } else {
+          const adminEmails = ["admin@admin.com", "leartshabija0@gmail.com"]
+          userIsAdmin = adminEmails.includes(user.email || "")
+          console.log("[v0] CLIENT: Admin check via email fallback:", userIsAdmin)
+        }
+      } catch (adminError) {
+        console.log("[v0] CLIENT: Admin API check failed, using email fallback")
+        const adminEmails = ["admin@admin.com", "leartshabija0@gmail.com"]
+        userIsAdmin = adminEmails.includes(user.email || "")
+      }
 
-      console.log("[v0] CLIENT: Profile query result:", profile)
-      console.log("[v0] CLIENT: Profile query error:", profileError)
-
-      const userIsAdmin = !profileError && profile?.role === "admin"
-      console.log("[v0] CLIENT: User role:", profile?.role)
-      console.log("[v0] CLIENT: Is admin:", userIsAdmin)
+      console.log("[v0] CLIENT: Final admin status:", userIsAdmin)
       setIsAdmin(userIsAdmin)
 
       if (userIsAdmin) {

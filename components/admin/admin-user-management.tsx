@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -14,9 +16,31 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Users, CreditCard, Ban, CheckCircle, XCircle, Calendar, Mail, Phone, RefreshCw } from "lucide-react"
+import {
+  Users,
+  CreditCard,
+  Ban,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  Mail,
+  Phone,
+  RefreshCw,
+  UserPlus,
+  GraduationCap,
+} from "lucide-react"
 
 interface User {
   id: string
@@ -59,6 +83,29 @@ export function AdminUserManagement() {
   const [totalInvoices, setTotalInvoices] = useState(0)
   const { toast } = useToast()
   const supabase = createClient()
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false)
+  const [userToPromote, setUserToPromote] = useState<User | null>(null)
+  const [instructorData, setInstructorData] = useState({
+    bio: "",
+    specialties: [] as string[],
+    certifications: [] as string[],
+    years_experience: 0,
+  })
+
+  const filteredUsers = users.filter((user) => {
+    const name = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase()
+    const email = user.email.toLowerCase()
+    const term = searchTerm.toLowerCase()
+
+    return (
+      (name.includes(term) || email.includes(term)) &&
+      (roleFilter === "all" || user.role === roleFilter) &&
+      (subscriptionFilter === "all" ||
+        (subscriptionFilter === "active" && user.subscription_status === "active") ||
+        (subscriptionFilter === "inactive" && user.subscription_status !== "active") ||
+        (subscriptionFilter === "unpaid" && user.unpaid_invoices > 0))
+    )
+  })
 
   useEffect(() => {
     loadUsers()
@@ -182,6 +229,15 @@ export function AdminUserManagement() {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      if (newRole === "instructor") {
+        const user = users.find((u) => u.id === userId)
+        if (user) {
+          setUserToPromote(user)
+          setShowPromoteDialog(true)
+          return
+        }
+      }
+
       const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
 
       if (error) throw error
@@ -202,32 +258,76 @@ export function AdminUserManagement() {
     }
   }
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.first_name && user.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (user.last_name && user.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  const promoteToInstructor = async () => {
+    if (!userToPromote) return
 
-    const matchesRole = roleFilter === "all" || user.role === roleFilter
+    try {
+      const response = await fetch(`/api/admin/users/${userToPromote.id}/promote-instructor`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(instructorData),
+      })
 
-    const matchesSubscription =
-      subscriptionFilter === "all" ||
-      (subscriptionFilter === "active" && user.subscription_status === "active") ||
-      (subscriptionFilter === "inactive" && user.subscription_status !== "active") ||
-      (subscriptionFilter === "unpaid" && user.unpaid_invoices > 0)
+      if (!response.ok) {
+        throw new Error("Failed to promote user to instructor")
+      }
 
-    return matchesSearch && matchesRole && matchesSubscription
-  })
+      toast({
+        title: "Succès",
+        description: `${userToPromote.first_name || userToPromote.email} a été promu instructeur`,
+      })
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800"
-      case "instructor":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+      setShowPromoteDialog(false)
+      setUserToPromote(null)
+      setInstructorData({
+        bio: "",
+        specialties: [],
+        certifications: [],
+        years_experience: 0,
+      })
+      loadUsers()
+    } catch (error) {
+      console.error("Error promoting to instructor:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de promouvoir l'utilisateur",
+        variant: "destructive",
+      })
     }
+  }
+
+  const addSpecialty = (specialty: string) => {
+    if (specialty && !instructorData.specialties.includes(specialty)) {
+      setInstructorData((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, specialty],
+      }))
+    }
+  }
+
+  const removeSpecialty = (specialty: string) => {
+    setInstructorData((prev) => ({
+      ...prev,
+      specialties: prev.specialties.filter((s) => s !== specialty),
+    }))
+  }
+
+  const addCertification = (certification: string) => {
+    if (certification && !instructorData.certifications.includes(certification)) {
+      setInstructorData((prev) => ({
+        ...prev,
+        certifications: [...prev.certifications, certification],
+      }))
+    }
+  }
+
+  const removeCertification = (certification: string) => {
+    setInstructorData((prev) => ({
+      ...prev,
+      certifications: prev.certifications.filter((c) => c !== certification),
+    }))
   }
 
   const getStatusColor = (status: string | null) => {
@@ -276,19 +376,141 @@ export function AdminUserManagement() {
     }
   }
 
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-100 text-red-800"
+      case "instructor":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
   if (isLoading) {
     return <div className="flex justify-center p-8">Chargement...</div>
   }
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={showPromoteDialog} onOpenChange={setShowPromoteDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Promouvoir en Instructeur
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous êtes sur le point de promouvoir {userToPromote?.first_name || userToPromote?.email} au rôle
+              d'instructeur. Veuillez remplir les informations suivantes :
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bio">Biographie</Label>
+              <Textarea
+                id="bio"
+                placeholder="Décrivez l'expérience et les qualifications de l'instructeur..."
+                value={instructorData.bio}
+                onChange={(e) => setInstructorData((prev) => ({ ...prev, bio: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="years_experience">Années d'expérience</Label>
+              <Input
+                id="years_experience"
+                type="number"
+                min="0"
+                value={instructorData.years_experience}
+                onChange={(e) =>
+                  setInstructorData((prev) => ({ ...prev, years_experience: Number.parseInt(e.target.value) || 0 }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Spécialités</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {instructorData.specialties.map((specialty) => (
+                  <Badge
+                    key={specialty}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => removeSpecialty(specialty)}
+                  >
+                    {specialty} ×
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Select onValueChange={addSpecialty}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ajouter une spécialité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Karaté">Karaté</SelectItem>
+                    <SelectItem value="Judo">Judo</SelectItem>
+                    <SelectItem value="Taekwondo">Taekwondo</SelectItem>
+                    <SelectItem value="Aikido">Aikido</SelectItem>
+                    <SelectItem value="Kung Fu">Kung Fu</SelectItem>
+                    <SelectItem value="Boxe">Boxe</SelectItem>
+                    <SelectItem value="MMA">MMA</SelectItem>
+                    <SelectItem value="Krav Maga">Krav Maga</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Certifications</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {instructorData.certifications.map((cert) => (
+                  <Badge
+                    key={cert}
+                    variant="outline"
+                    className="cursor-pointer"
+                    onClick={() => removeCertification(cert)}
+                  >
+                    {cert} ×
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ajouter une certification"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      addCertification(e.currentTarget.value)
+                      e.currentTarget.value = ""
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={promoteToInstructor}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Promouvoir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
             Gestion des utilisateurs ({users.length} utilisateurs, {totalInvoices} factures)
           </CardTitle>
-          <CardDescription>Gérez les membres, leurs abonnements et factures</CardDescription>
+          <CardDescription>
+            Gérez les membres, leurs abonnements et factures. Promouvez des utilisateurs en instructeurs.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6 flex-wrap">
@@ -334,7 +556,10 @@ export function AdminUserManagement() {
                         <h3 className="font-semibold">
                           {user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.email}
                         </h3>
-                        <Badge className={getRoleColor(user.role)}>{user.role}</Badge>
+                        <Badge className={getRoleColor(user.role)}>
+                          {user.role === "instructor" && <GraduationCap className="w-3 h-3 mr-1" />}
+                          {user.role}
+                        </Badge>
                         <Badge className={getStatusColor(user.subscription_status)}>{user.subscription_status}</Badge>
                         {user.subscription_status === "active" ? (
                           <Badge className="bg-green-100 text-green-800">
@@ -465,7 +690,12 @@ export function AdminUserManagement() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="user">Utilisateur</SelectItem>
-                          <SelectItem value="instructor">Instructeur</SelectItem>
+                          <SelectItem value="instructor">
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="w-3 h-3" />
+                              Instructeur
+                            </div>
+                          </SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>

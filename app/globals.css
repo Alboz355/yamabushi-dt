@@ -4,80 +4,80 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color tokens to match Yamabushi martial arts theme */
+  /* Restored red theme colors instead of brown/orange martial arts theme */
   --background: #ffffff;
-  --foreground: #1f2937;
-  --card: #fdf2f8;
-  --card-foreground: #475569;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #be123c;
+  --popover-foreground: #0f172a;
+  --primary: #dc2626;
   --primary-foreground: #ffffff;
-  --secondary: #fdf2f8;
-  --secondary-foreground: #1f2937;
-  --muted: #f8fafc;
-  --muted-foreground: #475569;
-  --accent: #ec4899;
-  --accent-foreground: #ffffff;
-  --destructive: #be123c;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #f8fafc;
-  --ring: #ec4899;
-  --chart-1: #be123c;
-  --chart-2: #6366f1;
-  --chart-3: #0891b2;
-  --chart-4: #f59e0b;
-  --chart-5: #10b981;
+  --border: #e2e8f0;
+  --input: #ffffff;
+  --ring: rgba(220, 38, 38, 0.2);
+  --chart-1: #dc2626;
+  --chart-2: #ef4444;
+  --chart-3: #f87171;
+  --chart-4: #64748b;
+  --chart-5: #f1f5f9;
   --radius: 0.5rem;
-  --sidebar: #fdf2f8;
-  --sidebar-foreground: #1f2937;
-  --sidebar-primary: #be123c;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #dc2626;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ec4899;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #ec4899;
-  /* Updated font families to match design brief */
-  --font-sans: var(--font-open-sans);
-  --font-serif: var(--font-montserrat);
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: rgba(220, 38, 38, 0.2);
+  /* Restored original font families */
+  --font-sans: var(--font-geist);
+  --font-serif: var(--font-playfair-display);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {
-  /* Updated dark mode colors to maintain martial arts theme */
+  /* Restored red theme for dark mode */
   --background: #0f172a;
-  --foreground: #f1f5f9;
+  --foreground: #f8fafc;
   --card: #1e293b;
-  --card-foreground: #cbd5e1;
+  --card-foreground: #f8fafc;
   --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
-  --primary: #f43f5e;
+  --popover-foreground: #f8fafc;
+  --primary: #ef4444;
   --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #f1f5f9;
-  --muted: #334155;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  --accent: #ec4899;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #334155;
-  --input: #334155;
-  --ring: #ec4899;
-  --chart-1: #f43f5e;
-  --chart-2: #8b5cf6;
-  --chart-3: #06b6d4;
-  --chart-4: #f59e0b;
-  --chart-5: #10b981;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #f8fafc;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: rgba(239, 68, 68, 0.3);
+  --chart-1: #ef4444;
+  --chart-2: #f87171;
+  --chart-3: #fca5a5;
+  --chart-4: #94a3b8;
+  --chart-5: #1e293b;
   --sidebar: #1e293b;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #f43f5e;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #ef4444;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ec4899;
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: #334155;
-  --sidebar-ring: #ec4899;
+  --sidebar-ring: rgba(239, 68, 68, 0.3);
 }
 
 @theme inline {

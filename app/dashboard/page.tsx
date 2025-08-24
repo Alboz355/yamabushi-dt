@@ -21,6 +21,12 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
+  const adminEmails = ["admin@admin.com"]
+  if (adminEmails.includes(data.user.email || "")) {
+    console.log("[v0] SERVER: Admin detected, redirecting to admin panel:", data.user.email)
+    redirect("/admin")
+  }
+
   // Get user profile
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
