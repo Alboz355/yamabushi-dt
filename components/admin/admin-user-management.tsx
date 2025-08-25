@@ -40,6 +40,7 @@ import {
   RefreshCw,
   UserPlus,
   GraduationCap,
+  UserMinus,
 } from "lucide-react"
 
 interface User {
@@ -85,6 +86,8 @@ export function AdminUserManagement() {
   const supabase = createClient()
   const [showPromoteDialog, setShowPromoteDialog] = useState(false)
   const [userToPromote, setUserToPromote] = useState<User | null>(null)
+  const [showDemoteDialog, setShowDemoteDialog] = useState(false)
+  const [userToDemote, setUserToDemote] = useState<User | null>(null)
   const [instructorData, setInstructorData] = useState({
     bio: "",
     specialties: [] as string[],
@@ -238,6 +241,15 @@ export function AdminUserManagement() {
         }
       }
 
+      if (newRole === "user") {
+        const user = users.find((u) => u.id === userId)
+        if (user && user.role === "instructor") {
+          setUserToDemote(user)
+          setShowDemoteDialog(true)
+          return
+        }
+      }
+
       const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
 
       if (error) throw error
@@ -266,6 +278,7 @@ export function AdminUserManagement() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify(instructorData),
       })
@@ -293,6 +306,40 @@ export function AdminUserManagement() {
       toast({
         title: "Erreur",
         description: "Impossible de promouvoir l'utilisateur",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const demoteFromInstructor = async () => {
+    if (!userToDemote) return
+
+    try {
+      const response = await fetch(`/api/admin/users/${userToDemote.id}/demote-instructor`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to demote instructor")
+      }
+
+      toast({
+        title: "Succès",
+        description: `${userToDemote.first_name || userToDemote.email} n'est plus instructeur`,
+      })
+
+      setShowDemoteDialog(false)
+      setUserToDemote(null)
+      loadUsers()
+    } catch (error) {
+      console.error("Error demoting instructor:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de rétrograder l'instructeur",
         variant: "destructive",
       })
     }
@@ -393,6 +440,32 @@ export function AdminUserManagement() {
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={showDemoteDialog} onOpenChange={setShowDemoteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserMinus className="h-5 w-5" />
+              Rétrograder l'Instructeur
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir rétrograder {userToDemote?.first_name || userToDemote?.email} du rôle
+              d'instructeur ? Cette action supprimera toutes les données d'instructeur associées et ne peut pas être
+              annulée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={demoteFromInstructor}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <UserMinus className="h-4 w-4 mr-2" />
+              Rétrograder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showPromoteDialog} onOpenChange={setShowPromoteDialog}>
         <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>

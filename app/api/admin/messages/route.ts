@@ -1,15 +1,23 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
-    // Get the authenticated user
+    const { createClient: createServerClient } = await import("@/lib/supabase/server")
+    const userSupabase = await createServerClient()
+
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await userSupabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -25,19 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, message, message_type, priority, expires_at } = body
 
-    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
-    const serviceSupabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    )
-
-    const { data, error } = await serviceSupabase
+    const { data, error } = await supabase
       .from("admin_messages")
       .insert({
         title,

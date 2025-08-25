@@ -75,21 +75,36 @@ export function InstructorManagement() {
 
   const loadInstructorData = async () => {
     try {
-      // Load instructors with profile information
-      const { data: instructorsData } = await supabase
-        .from("instructors")
-        .select(`
-          *,
-          profile:profiles(first_name, last_name, email, phone, role)
-        `)
-        .order("created_at", { ascending: false })
+      const response = await fetch("/api/admin/users")
+      if (response.ok) {
+        const { users } = await response.json()
+        const instructorUsers = users.filter((user: any) => user.role === "instructor")
 
-      // Load available users who can become instructors
-      const { data: usersData } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email, role")
-        .in("role", ["user", "instructor"])
-        .order("first_name")
+        // Transform admin API data to match instructor interface
+        const instructorsData = instructorUsers.map((user: any) => ({
+          id: user.id, // Using user ID as instructor ID for simplicity
+          profile_id: user.id,
+          bio: user.bio || "",
+          years_experience: user.years_experience || 0,
+          certifications: user.certifications || [],
+          specialties: user.specialties || [],
+          is_active: true,
+          created_at: user.created_at,
+          profile: {
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+          },
+        }))
+
+        setInstructors(instructorsData)
+
+        // Set available users (non-instructors who can be promoted)
+        const availableUsersData = users.filter((user: any) => user.role === "user")
+        setAvailableUsers(availableUsersData)
+      }
 
       // Load available classes
       const { data: classesData } = await supabase
@@ -113,8 +128,6 @@ export function InstructorManagement() {
         `)
         .eq("is_active", true)
 
-      setInstructors(instructorsData || [])
-      setAvailableUsers(usersData || [])
       setAvailableClasses(classesData || [])
       setInstructorClasses(assignmentsData || [])
     } catch (error) {
@@ -126,11 +139,19 @@ export function InstructorManagement() {
 
   const promoteToInstructor = async (profileId: string) => {
     try {
-      // Update user role to instructor
-      const { error: roleError } = await supabase.from("profiles").update({ role: "instructor" }).eq("id", profileId)
+      const response = await fetch(`/api/admin/users/${profileId}/promote-instructor`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
-      if (!roleError) {
+      if (response.ok) {
         loadInstructorData()
+        setIsCreating(false)
+      } else {
+        const error = await response.json()
+        console.error("Error promoting to instructor:", error)
       }
     } catch (error) {
       console.error("Error promoting to instructor:", error)
@@ -188,16 +209,19 @@ export function InstructorManagement() {
 
   const deactivateInstructor = async (instructorId: string) => {
     try {
-      // Deactivate instructor
-      await supabase.from("instructors").update({ is_active: false }).eq("id", instructorId)
+      const response = await fetch(`/api/admin/users/${instructorId}/demote-instructor`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
-      // Remove instructor role
-      const instructor = instructors.find((i) => i.id === instructorId)
-      if (instructor) {
-        await supabase.from("profiles").update({ role: "user" }).eq("id", instructor.profile_id)
+      if (response.ok) {
+        loadInstructorData()
+      } else {
+        const error = await response.json()
+        console.error("Error demoting instructor:", error)
       }
-
-      loadInstructorData()
     } catch (error) {
       console.error("Error deactivating instructor:", error)
     }
@@ -234,13 +258,11 @@ export function InstructorManagement() {
                     <SelectValue placeholder="Choisir un membre..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableUsers
-                      .filter((user) => user.role === "user")
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.first_name} {user.last_name} ({user.email})
-                        </SelectItem>
-                      ))}
+                    {availableUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.first_name} {user.last_name} ({user.email})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -258,68 +280,76 @@ export function InstructorManagement() {
 
         <TabsContent value="instructors" className="space-y-4">
           <div className="grid gap-4">
-            {instructors.map((instructor) => (
-              <Card key={instructor.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        {instructor.profile.first_name} {instructor.profile.last_name}
-                        <Badge variant={instructor.is_active ? "default" : "secondary"}>
-                          {instructor.is_active ? "Actif" : "Inactif"}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>
-                        {instructor.profile.email} • {instructor.years_experience} ans d'expérience
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedInstructor(instructor.id)}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Gérer
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => deactivateInstructor(instructor.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-medium">Bio</Label>
-                      <p className="text-sm text-muted-foreground">{instructor.bio}</p>
-                    </div>
-                    {instructor.specialties && instructor.specialties.length > 0 && (
-                      <div>
-                        <Label className="text-sm font-medium">Spécialités</Label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {instructor.specialties.map((specialty, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {specialty}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {instructor.certifications && instructor.certifications.length > 0 && (
-                      <div>
-                        <Label className="text-sm font-medium">Certifications</Label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {instructor.certifications.map((cert, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              <Award className="h-3 w-3 mr-1" />
-                              {cert}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            {instructors.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">Aucun instructeur trouvé. Promouvez un membre pour commencer.</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              instructors.map((instructor) => (
+                <Card key={instructor.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5" />
+                          {instructor.profile.first_name} {instructor.profile.last_name}
+                          <Badge variant={instructor.is_active ? "default" : "secondary"}>
+                            {instructor.is_active ? "Actif" : "Inactif"}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                          {instructor.profile.email} • {instructor.years_experience} ans d'expérience
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedInstructor(instructor.id)}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Gérer
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => deactivateInstructor(instructor.profile_id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-medium">Bio</Label>
+                        <p className="text-sm text-muted-foreground">{instructor.bio || "Aucune bio disponible"}</p>
+                      </div>
+                      {instructor.specialties && instructor.specialties.length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium">Spécialités</Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {instructor.specialties.map((specialty, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {specialty}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {instructor.certifications && instructor.certifications.length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium">Certifications</Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {instructor.certifications.map((cert, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                <Award className="h-3 w-3 mr-1" />
+                                {cert}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
 
