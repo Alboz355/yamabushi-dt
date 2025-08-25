@@ -146,15 +146,29 @@ export function AdminMessages() {
 
     setIsCreating(true)
     try {
-      const { error } = await supabase.from("admin_messages").insert({
-        title: newMessage.title,
-        message: newMessage.message,
-        message_type: newMessage.message_type,
-        priority: newMessage.priority,
-        expires_at: newMessage.expires_at || null,
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("User not authenticated")
+
+      const response = await fetch("/api/admin/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: newMessage.title,
+          message: newMessage.message,
+          message_type: newMessage.message_type,
+          priority: newMessage.priority,
+          expires_at: newMessage.expires_at || null,
+        }),
       })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create message")
+      }
 
       toast({
         title: "Succès",
@@ -174,7 +188,7 @@ export function AdminMessages() {
       console.error("Error creating message:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de créer le message",
+        description: `Impossible de créer le message: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
         variant: "destructive",
       })
     } finally {

@@ -18,6 +18,7 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isInstructor, setIsInstructor] = useState(false)
   const router = useRouter()
 
   const checkSubscription = useCallback(async () => {
@@ -37,6 +38,7 @@ export function useSubscription() {
         console.log("[v0] CLIENT: No user found, setting subscription to null")
         setSubscription(null)
         setIsAdmin(false)
+        setIsInstructor(false)
         setLoading(false)
         return
       }
@@ -45,6 +47,8 @@ export function useSubscription() {
       console.log("[v0] CLIENT: User email:", user.email)
 
       let userIsAdmin = false
+      let userIsInstructor = false
+
       try {
         console.log("[v0] CLIENT: Checking admin status via API...")
         const adminResponse = await fetch("/api/admin/users")
@@ -52,20 +56,24 @@ export function useSubscription() {
           const adminData = await adminResponse.json()
           const currentUser = adminData.users?.find((u: any) => u.id === user.id)
           userIsAdmin = currentUser?.role === "admin"
+          userIsInstructor = currentUser?.role === "instructor"
           console.log("[v0] CLIENT: Admin check via API successful:", userIsAdmin)
+          console.log("[v0] CLIENT: Instructor check via API successful:", userIsInstructor)
         } else {
-          const adminEmails = ["admin@admin.com", "leartshabija0@gmail.com"]
+          const adminEmails = ["admin@admin.com"]
           userIsAdmin = adminEmails.includes(user.email || "")
           console.log("[v0] CLIENT: Admin check via email fallback:", userIsAdmin)
         }
       } catch (adminError) {
         console.log("[v0] CLIENT: Admin API check failed, using email fallback")
-        const adminEmails = ["admin@admin.com", "leartshabija0@gmail.com"]
+        const adminEmails = ["admin@admin.com"]
         userIsAdmin = adminEmails.includes(user.email || "")
       }
 
       console.log("[v0] CLIENT: Final admin status:", userIsAdmin)
+      console.log("[v0] CLIENT: Final instructor status:", userIsInstructor)
       setIsAdmin(userIsAdmin)
+      setIsInstructor(userIsInstructor)
 
       if (userIsAdmin) {
         console.log("[v0] CLIENT: User is admin, bypassing subscription check")
@@ -82,7 +90,22 @@ export function useSubscription() {
         return
       }
 
-      console.log("[v0] CLIENT: User is not admin, checking regular subscription...")
+      if (userIsInstructor) {
+        console.log("[v0] CLIENT: User is instructor, bypassing subscription check")
+        const instructorSubscription = {
+          id: "instructor-subscription",
+          status: "active",
+          end_date: "2099-12-31",
+          plan_type: "instructor",
+          price: 0,
+          payment_method: "instructor",
+        }
+        setSubscription(instructorSubscription)
+        setLoading(false)
+        return
+      }
+
+      console.log("[v0] CLIENT: User is not admin or instructor, checking regular subscription...")
 
       let retryCount = 0
       const maxRetries = 2
@@ -157,10 +180,11 @@ export function useSubscription() {
 
   return {
     subscription,
-    hasActiveSubscription: !!subscription || isAdmin,
+    hasActiveSubscription: !!subscription || isAdmin || isInstructor,
     loading,
     error,
     refetch: checkSubscription,
     isAdmin,
+    isInstructor,
   }
 }

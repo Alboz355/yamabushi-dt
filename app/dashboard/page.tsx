@@ -21,14 +21,44 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
+  // Check admin status using email fallback
   const adminEmails = ["admin@admin.com"]
-  if (adminEmails.includes(data.user.email || "")) {
-    console.log("[v0] SERVER: Admin detected, redirecting to admin panel:", data.user.email)
+  const isAdmin = adminEmails.includes(data.user.email || "")
+
+  if (isAdmin) {
+    console.log("[v0] SERVER: Admin detected by email, redirecting to admin panel:", data.user.email)
     redirect("/admin")
   }
 
-  // Get user profile
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
+  // Check instructor status via API to avoid RLS issues
+  try {
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+    const adminSupabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    )
+
+    const { data: instructorCheck, error: instructorError } = await adminSupabase
+      .from("instructors")
+      .select("profile_id")
+      .eq("profile_id", data.user.id)
+      .single()
+
+    if (instructorCheck && !instructorError) {
+      console.log("[v0] SERVER: Instructor detected by API, redirecting to instructor dashboard:", data.user.email)
+      redirect("/instructor/dashboard")
+    }
+  } catch (error) {
+    console.log("[v0] SERVER: Instructor check failed, continuing as regular user:", error?.message || error)
+  }
+
+  const { data: fullProfile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
   const { data: upcomingAttendance } = await supabase
     .from("course_attendance")
@@ -95,12 +125,12 @@ export default async function DashboardPage() {
   return (
     <SubscriptionGuard>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
-        <DashboardHeader user={data.user} profile={profile} />
+        <DashboardHeader user={data.user} profile={fullProfile} />
 
         <div className="container mx-auto px-4 py-6 md:py-8">
           <div className="mb-6 md:mb-8">
             <h1 className="font-serif font-bold text-2xl md:text-3xl text-primary mb-2">
-              Bonjour {profile?.first_name || "Membre"} !
+              Bonjour {fullProfile?.first_name || "Membre"} !
             </h1>
             <p className="text-sm md:text-base text-muted-foreground">Bienvenue dans votre espace membre Yamabushi</p>
           </div>
@@ -142,7 +172,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Ma progression</span>
@@ -155,7 +185,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Mes factures</span>
@@ -191,22 +221,26 @@ export default async function DashboardPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Type d'abonnement</span>
                       <Badge variant="secondary" className="capitalize text-xs">
-                        {profile?.membership_type?.replace("_", " ") || "Non défini"}
+                        {fullProfile?.membership_type?.replace("_", " ") || "Non défini"}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Statut</span>
                       <Badge
-                        variant={profile?.membership_status === "active" ? "default" : "destructive"}
+                        variant={fullProfile?.membership_status === "active" ? "default" : "destructive"}
                         className="capitalize text-xs"
                       >
-                        {profile?.membership_status === "active" ? "Actif" : profile?.membership_status || "Inactif"}
+                        {fullProfile?.membership_status === "active"
+                          ? "Actif"
+                          : fullProfile?.membership_status || "Inactif"}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Membre depuis</span>
                       <span className="text-xs md:text-sm font-medium">
-                        {profile?.join_date ? new Date(profile.join_date).toLocaleDateString("fr-FR") : "Non défini"}
+                        {fullProfile?.join_date
+                          ? new Date(fullProfile.join_date).toLocaleDateString("fr-FR")
+                          : "Non défini"}
                       </span>
                     </div>
                   </div>

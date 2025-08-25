@@ -9,13 +9,24 @@ export async function getUserRole(): Promise<"user" | "admin" | "instructor" | n
   } = await supabase.auth.getUser()
   if (userError || !user) return null
 
+  const adminEmails = ["admin@admin.com"]
+  if (adminEmails.includes(user.email || "")) {
+    console.log("[v0] SERVER: Admin detected by email:", user.email)
+    return "admin"
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single()
 
-  if (profileError || !profile) return "user"
+  if (profileError) {
+    console.log("[v0] SERVER: Profile query failed, using email fallback for user:", user.email)
+    return "user"
+  }
+
+  if (!profile) return "user"
 
   return profile.role as "user" | "admin" | "instructor"
 }

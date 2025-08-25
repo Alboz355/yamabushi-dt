@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useSubscription } from "@/hooks/use-subscription"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
 interface SubscriptionGuardProps {
   children: React.ReactNode
@@ -12,26 +12,14 @@ interface SubscriptionGuardProps {
 }
 
 export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps) {
-  const { hasActiveSubscription, loading, error, refetch, isAdmin } = useSubscription()
+  const { hasActiveSubscription, loading, error, refetch } = useSubscription()
   const router = useRouter()
   const retryCountRef = useRef(0)
-  const maxRetries = 2 // Reduced for mobile performance
+  const maxRetries = 2
   const hasRedirectedRef = useRef(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
 
   useEffect(() => {
-    if (!loading && isAdmin && typeof window !== "undefined" && window.location.pathname !== "/admin") {
-      console.log("[v0] CLIENT: Admin detected in SubscriptionGuard, redirecting to admin panel")
-      hasRedirectedRef.current = true
-      setIsRedirecting(true)
-
-      // Use window.location.href for immediate redirection that actually works
-      window.location.href = "/admin"
-    }
-  }, [isAdmin, loading])
-
-  useEffect(() => {
-    if (!loading && !hasActiveSubscription && !error && !hasRedirectedRef.current && !isRedirecting && !isAdmin) {
+    if (!loading && !hasActiveSubscription && !error && !hasRedirectedRef.current) {
       if (retryCountRef.current < maxRetries) {
         console.log(
           `[v0] CLIENT: No active subscription found, retrying... (${retryCountRef.current + 1}/${maxRetries})`,
@@ -39,25 +27,21 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
         retryCountRef.current++
         setTimeout(() => {
           refetch()
-        }, 1500) // Reduced delay for better mobile UX
+        }, 1500)
       } else {
         console.log("[v0] CLIENT: No active subscription after retries, redirecting to subscription page")
         hasRedirectedRef.current = true
-        setIsRedirecting(true)
 
         setTimeout(() => {
           router.push("/subscription")
         }, 500)
       }
-    } else if (hasActiveSubscription || isAdmin) {
-      console.log("[v0] CLIENT: Active subscription or admin found, resetting retry count")
+    } else if (hasActiveSubscription) {
+      console.log("[v0] CLIENT: Active subscription found, resetting retry count")
       retryCountRef.current = 0
-      if (!isAdmin) {
-        hasRedirectedRef.current = false
-      }
-      setIsRedirecting(false)
+      hasRedirectedRef.current = false
     }
-  }, [hasActiveSubscription, loading, error, router, refetch, isRedirecting, isAdmin])
+  }, [hasActiveSubscription, loading, error, router, refetch])
 
   if (loading || (!hasActiveSubscription && retryCountRef.current < maxRetries && !hasRedirectedRef.current)) {
     return (
@@ -85,14 +69,12 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
     )
   }
 
-  if ((!hasActiveSubscription && hasRedirectedRef.current) || isRedirecting) {
+  if (!hasActiveSubscription && hasRedirectedRef.current) {
     return (
       fallback || (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <p className="text-gray-600 mb-4">
-              {isAdmin ? "Redirection vers le tableau de bord admin..." : "Redirection vers la page d'abonnement..."}
-            </p>
+            <p className="text-gray-600 mb-4">Redirection vers la page d'abonnement...</p>
           </div>
         </div>
       )

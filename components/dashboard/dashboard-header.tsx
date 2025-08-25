@@ -36,7 +36,9 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
       ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
       : user.email?.[0]?.toUpperCase() || "U"
 
-  const isAdmin = profile?.role === "admin"
+  const adminEmails = ["admin@admin.com"]
+  const isAdmin = profile?.role === "admin" || adminEmails.includes(user.email || "")
+  const isInstructor = profile?.role === "instructor"
 
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm">
@@ -123,6 +125,14 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                 Admin
               </Link>
             )}
+            {isInstructor && (
+              <Link
+                href="/instructor/dashboard"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Instructeur
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -168,6 +178,16 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="text-orange-600">
                         Administration
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {isInstructor && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/instructor/dashboard" className="text-blue-600">
+                        Interface Instructeur
                       </Link>
                     </DropdownMenuItem>
                   </>

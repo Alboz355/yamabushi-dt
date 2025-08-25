@@ -21,33 +21,9 @@ export default function LoginPage() {
   const [challengeId, setChallengeId] = useState<string | null>(null)
   const router = useRouter()
 
-  const redirectBasedOnRole = async (userEmail: string) => {
-    console.log("[v0] Determining redirect based on user role for:", userEmail)
-
-    const adminEmails = ["admin@admin.com"] // Only admin@admin.com is admin
-    if (adminEmails.includes(userEmail)) {
-      console.log("[v0] Admin user detected, redirecting to admin panel")
-      // Disable any other navigation attempts
-      window.history.replaceState(null, "", "/admin")
-      // Force immediate navigation
-      setTimeout(() => {
-        window.location.replace("/admin")
-      }, 100)
-      return
-    }
-
-    // Check if user is instructor (you can expand this logic later)
-    // For now, we'll check if email contains "instructor" or add specific instructor emails
-    const instructorEmails = ["instructor@yamabushi.com"] // Add instructor emails here
-    if (instructorEmails.includes(userEmail)) {
-      console.log("[v0] Instructor user detected, redirecting to instructor dashboard")
-      window.location.replace("/instructor/dashboard")
-      return
-    }
-
-    // Default: regular user goes to dashboard
-    console.log("[v0] Regular user detected, redirecting to dashboard")
-    window.location.replace("/dashboard")
+  const redirectToDashboard = () => {
+    console.log("[v0] Login successful, redirecting to dashboard")
+    window.location.href = "/dashboard"
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -79,8 +55,8 @@ export default function LoginPage() {
         return
       }
 
-      console.log("[v0] No MFA required, redirecting based on role")
-      await redirectBasedOnRole(email)
+      console.log("[v0] No MFA required, redirecting to dashboard")
+      redirectToDashboard()
     } catch (error: unknown) {
       console.log("[v0] Login error:", error)
       setError(error instanceof Error ? error.message : "Une erreur s'est produite")
@@ -122,8 +98,8 @@ export default function LoginPage() {
 
       if (verifyError) throw verifyError
 
-      console.log("[v0] MFA verification successful, redirecting based on role")
-      await redirectBasedOnRole(email)
+      console.log("[v0] MFA verification successful, redirecting to dashboard")
+      redirectToDashboard()
     } catch (error: unknown) {
       console.log("[v0] MFA verification error:", error)
       setError(error instanceof Error ? error.message : "Code de vérification incorrect")
