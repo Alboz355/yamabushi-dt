@@ -59,6 +59,46 @@ export default async function DashboardPage() {
 
   const { data: fullProfile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
+  let activeSubscription = null
+  let hasInvoices = false
+
+  try {
+    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
+    const adminSupabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    )
+
+    // Get active subscription
+    const { data: subscriptionData } = await adminSupabase
+      .from("subscriptions")
+      .select("*")
+      .eq("member_id", data.user.id)
+      .eq("status", "active")
+      .single()
+
+    if (subscriptionData) {
+      activeSubscription = subscriptionData
+
+      // Check if user has invoices
+      const { data: invoicesData } = await adminSupabase
+        .from("invoices")
+        .select("id")
+        .eq("member_id", data.user.id)
+        .limit(1)
+
+      hasInvoices = invoicesData && invoicesData.length > 0
+    }
+  } catch (error) {
+    console.log("[v0] Dashboard: Error fetching subscription data:", error)
+  }
+
   const { data: upcomingAttendance } = await supabase
     .from("course_attendance")
     .select("*")
@@ -158,7 +198,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Planifier un cours</span>
@@ -203,6 +243,19 @@ export default async function DashboardPage() {
                       <span className="text-sm md:text-base">Mon profil</span>
                     </Link>
                   </Button>
+                  <Button asChild className="justify-start bg-transparent h-10 md:h-11" variant="outline">
+                    <Link href="/help">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-sm md:text-base">Demande d'aide</span>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -220,25 +273,23 @@ export default async function DashboardPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Type d'abonnement</span>
                       <Badge variant="secondary" className="capitalize text-xs">
-                        {fullProfile?.membership_type?.replace("_", " ") || "Non défini"}
+                        {activeSubscription?.plan_type?.replace("_", " ") || "Non défini"}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Statut</span>
                       <Badge
-                        variant={fullProfile?.membership_status === "active" ? "default" : "destructive"}
+                        variant={activeSubscription?.status === "active" && hasInvoices ? "default" : "destructive"}
                         className="capitalize text-xs"
                       >
-                        {fullProfile?.membership_status === "active"
-                          ? "Actif"
-                          : fullProfile?.membership_status || "Inactif"}
+                        {activeSubscription?.status === "active" && hasInvoices ? "Actif" : "Inactif"}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs md:text-sm text-muted-foreground">Membre depuis</span>
                       <span className="text-xs md:text-sm font-medium">
-                        {fullProfile?.join_date
-                          ? new Date(fullProfile.join_date).toLocaleDateString("fr-FR")
+                        {activeSubscription?.start_date
+                          ? new Date(activeSubscription.start_date).toLocaleDateString("fr-FR")
                           : "Non défini"}
                       </span>
                     </div>

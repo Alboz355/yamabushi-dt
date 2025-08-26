@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { CheckCircle, Circle, Star, Target, BookOpen } from "lucide-react"
+import { CheckCircle, Circle, Star, Target, BookOpen, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 
 interface TechniqueTrackerProps {
@@ -41,6 +41,7 @@ interface Technique {
 export function TechniqueTracker({ userId, discipline, currentBelt }: TechniqueTrackerProps) {
   const [techniques, setTechniques] = useState<Technique[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [notes, setNotes] = useState("")
@@ -53,6 +54,8 @@ export function TechniqueTracker({ userId, discipline, currentBelt }: TechniqueT
   const loadTechniques = async () => {
     try {
       setLoading(true)
+      setError(null)
+      console.log("[v0] Loading techniques for discipline:", discipline.id, "belt:", currentBelt)
 
       // Load techniques for current belt level
       const { data: beltTechniques, error: techniquesError } = await supabase
@@ -64,11 +67,22 @@ export function TechniqueTracker({ userId, discipline, currentBelt }: TechniqueT
 
       if (techniquesError) {
         console.error("Error loading techniques:", techniquesError)
+        if (techniquesError.message.includes("infinite recursion detected")) {
+          setError("Erreur de configuration de la base de données. Veuillez contacter l'administrateur.")
+          return
+        }
+        setError("Erreur lors du chargement des techniques")
+        return
+      }
+
+      if (!beltTechniques || beltTechniques.length === 0) {
+        console.log("[v0] No techniques found for this belt level")
+        setTechniques([])
         return
       }
 
       // Load user's mastery status for these techniques
-      const techniqueIds = beltTechniques?.map((t) => t.id) || []
+      const techniqueIds = beltTechniques.map((t) => t.id)
       const { data: memberTechniques, error: masteryError } = await supabase
         .from("member_techniques")
         .select("*")
@@ -77,24 +91,30 @@ export function TechniqueTracker({ userId, discipline, currentBelt }: TechniqueT
 
       if (masteryError) {
         console.error("Error loading mastery data:", masteryError)
+        if (masteryError.message.includes("infinite recursion detected")) {
+          setError("Erreur de configuration de la base de données. Veuillez contacter l'administrateur.")
+          return
+        }
+        // Continue without mastery data if there's an error
       }
 
       // Combine technique data with mastery status
-      const combinedTechniques =
-        beltTechniques?.map((technique) => {
-          const mastery = memberTechniques?.find((m) => m.technique_id === technique.id)
-          return {
-            ...technique,
-            is_mastered: mastery?.is_mastered || false,
-            mastered_date: mastery?.mastered_date,
-            instructor_validated: mastery?.instructor_validated || false,
-            notes: mastery?.notes || "",
-          }
-        }) || []
+      const combinedTechniques = beltTechniques.map((technique) => {
+        const mastery = memberTechniques?.find((m) => m.technique_id === technique.id)
+        return {
+          ...technique,
+          is_mastered: mastery?.is_mastered || false,
+          mastered_date: mastery?.mastered_date,
+          instructor_validated: mastery?.instructor_validated || false,
+          notes: mastery?.notes || "",
+        }
+      })
 
+      console.log("[v0] Loaded techniques successfully:", combinedTechniques.length)
       setTechniques(combinedTechniques)
     } catch (error) {
       console.error("Error in loadTechniques:", error)
+      setError("Erreur lors du chargement des techniques")
     } finally {
       setLoading(false)
     }
@@ -237,6 +257,29 @@ export function TechniqueTracker({ userId, discipline, currentBelt }: TechniqueT
         <CardContent>
           <div className="text-center py-8">
             <div className="text-muted-foreground">Chargement des techniques...</div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Techniques - {currentBelt}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <div className="text-red-600 font-medium mb-2">Erreur de chargement</div>
+            <div className="text-muted-foreground mb-4">{error}</div>
+            <Button onClick={loadTechniques} variant="outline">
+              Réessayer
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -25,11 +25,24 @@ interface Invoice {
   year: number
 }
 
+interface Subscription {
+  id: string
+  member_id: string
+  plan_type: string
+  price: number
+  status: string
+  start_date: string
+  end_date: string
+  auto_renew: boolean
+  payment_method: string
+}
+
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [autoPayment, setAutoPayment] = useState(false)
@@ -43,27 +56,73 @@ export default function BillingPage() {
 
   const fetchUserAndInvoices = async () => {
     try {
+      console.log("[v0] Starting fetchUserAndInvoices...")
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser()
-      if (!currentUser) return
+      if (!currentUser) {
+        console.log("[v0] No current user found")
+        return
+      }
 
+      console.log("[v0] Current user:", currentUser.id, currentUser.email)
       setUser(currentUser)
 
-      // Get user profile
-      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", currentUser.id).single()
-      setProfile(profileData)
+      try {
+        console.log("[v0] Fetching profile by email:", currentUser.email)
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("email", currentUser.email)
+          .single()
+        console.log("[v0] Profile data fetched:", profileData)
+        setProfile(profileData)
+      } catch (profileError) {
+        console.log("[v0] Profile lookup failed, using fallback data:", profileError)
+        // Fallback profile data
+        setProfile({
+          id: currentUser.id,
+          email: currentUser.email,
+          first_name: currentUser.user_metadata?.first_name || "",
+          last_name: currentUser.user_metadata?.last_name || "",
+        })
+      }
 
-      // Get invoices
+      try {
+        console.log("[v0] Fetching subscription for member_id:", currentUser.id)
+        const { data: subscriptionData } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("member_id", currentUser.id)
+          .eq("status", "active")
+          .single()
+
+        if (subscriptionData) {
+          setSubscription(subscriptionData)
+          console.log("[v0] Active subscription found:", subscriptionData)
+        } else {
+          console.log("[v0] No subscription data returned")
+        }
+      } catch (subscriptionError) {
+        console.log("[v0] No active subscription found:", subscriptionError)
+      }
+
+      console.log("[v0] Fetching invoices for member_id:", currentUser.id)
       const { data, error } = await supabase
         .from("invoices")
         .select("*")
         .eq("member_id", currentUser.id)
         .order("due_date", { ascending: true })
 
-      if (error) throw error
+      console.log("[v0] Invoice query result - data:", data, "error:", error)
 
-      console.log("[v0] Fetched invoices:", data)
+      if (error) {
+        console.error("[v0] Invoice query error:", error)
+        throw error
+      }
+
+      console.log("[v0] Raw invoices fetched:", data?.length || 0, "invoices")
+      console.log("[v0] Invoice details:", data)
 
       const sortedInvoices = (data || []).sort((a, b) => {
         // Pending invoices first
@@ -74,6 +133,7 @@ export default function BillingPage() {
         return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
       })
 
+      console.log("[v0] Final sorted invoices:", sortedInvoices.length, "invoices")
       setInvoices(sortedInvoices)
     } catch (error) {
       console.error("[v0] Error fetching invoices:", error)
@@ -150,6 +210,32 @@ export default function BillingPage() {
     return user?.email || "Membre"
   }
 
+  const getPlanTypeLabel = (planType: string) => {
+    switch (planType) {
+      case "monthly":
+        return "Mensuel"
+      case "annual":
+        return "Annuel"
+      case "lifetime":
+        return "À vie"
+      default:
+        return planType
+    }
+  }
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method) {
+      case "monthly":
+        return "Paiement mensuel"
+      case "annual":
+        return "Paiement annuel"
+      case "one_time":
+        return "Paiement unique"
+      default:
+        return method
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10 touch-pan-y overflow-x-hidden">
@@ -172,6 +258,47 @@ export default function BillingPage() {
           </p>
         </div>
 
+        {subscription && (
+          <Card className="border-primary/20 mb-6">
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-serif text-primary">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
+                Mon Abonnement
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-4 sm:p-6 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-primary text-lg">
+                        {getPlanTypeLabel(subscription.plan_type)}
+                      </span>
+                      <Badge className="bg-green-100 text-green-800 border-green-200">
+                        {subscription.status === "active" ? "Actif" : subscription.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>
+                        Du {new Date(subscription.start_date).toLocaleDateString("fr-FR")} au{" "}
+                        {new Date(subscription.end_date).toLocaleDateString("fr-FR")}
+                      </div>
+                      <div>{getPaymentMethodLabel(subscription.payment_method)}</div>
+                      {subscription.auto_renew && <div>✓ Renouvellement automatique</div>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-primary">{subscription.price}.-</div>
+                    <div className="text-sm text-muted-foreground">
+                      {subscription.payment_method === "monthly" ? "par mois" : "par an"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-primary/20">
           <CardHeader className="pb-4 sm:pb-6">
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-serif text-primary">
@@ -183,9 +310,13 @@ export default function BillingPage() {
             {invoices.length === 0 ? (
               <div className="text-center py-8 sm:py-12">
                 <Receipt className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-serif text-base sm:text-lg text-primary mb-2">Aucune facture</h3>
+                <h3 className="font-serif text-base sm:text-lg text-primary mb-2">
+                  {subscription ? "Aucune facture générée" : "Aucune facture"}
+                </h3>
                 <p className="text-sm sm:text-base text-muted-foreground px-4">
-                  Vos factures apparaîtront ici une fois votre abonnement activé
+                  {subscription
+                    ? "Vos factures seront générées automatiquement selon votre plan d'abonnement"
+                    : "Vos factures apparaîtront ici une fois votre abonnement activé"}
                 </p>
               </div>
             ) : (

@@ -14,6 +14,8 @@ import type { User } from "@supabase/supabase-js"
 import { useState } from "react"
 import { AutomatedReports } from "./automated-reports"
 import { InstructorManagement } from "./instructor-management"
+import { AdminHelpRequests } from "./admin-help-requests"
+import { AdminSubscriptionManagement } from "./admin-subscription-management"
 
 interface AdminDashboardProps {
   user: User
@@ -55,7 +57,7 @@ Date d'export,${new Date().toLocaleDateString()}`
   }
 
   const handleManageSubscriptions = () => {
-    setActiveTab("users")
+    setActiveTab("subscriptions")
   }
 
   return (
@@ -69,15 +71,17 @@ Date d'export,${new Date().toLocaleDateString()}`
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="analytics">Analyses</TabsTrigger>
             <TabsTrigger value="users">Utilisateurs</TabsTrigger>
             <TabsTrigger value="instructors">Instructeurs</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="courses">Cours</TabsTrigger>
+            <TabsTrigger value="help">Demandes d'aide</TabsTrigger>
+            <TabsTrigger value="subscriptions">Abonnements</TabsTrigger>
             <TabsTrigger value="reports">Rapports</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
+            <TabsTrigger value="courses">Cours</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -153,6 +157,20 @@ Date d'export,${new Date().toLocaleDateString()}`
                   >
                     🔍 Consulter les logs d'activité
                   </Button>
+                  <Button
+                    className="w-full justify-start bg-transparent"
+                    variant="outline"
+                    onClick={() => setActiveTab("help")}
+                  >
+                    ❓ Gérer les demandes d'aide
+                  </Button>
+                  <Button
+                    className="w-full justify-start bg-transparent"
+                    variant="outline"
+                    onClick={() => setActiveTab("courses")}
+                  >
+                    📚 Gérer les cours
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -174,6 +192,22 @@ Date d'export,${new Date().toLocaleDateString()}`
             <AdminMessages />
           </TabsContent>
 
+          <TabsContent value="help">
+            <AdminHelpRequests />
+          </TabsContent>
+
+          <TabsContent value="subscriptions">
+            <AdminSubscriptionManagement />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <AutomatedReports />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <AdminActivityLogs />
+          </TabsContent>
+
           <TabsContent value="courses">
             <Card>
               <CardHeader>
@@ -184,14 +218,6 @@ Date d'export,${new Date().toLocaleDateString()}`
                 <p className="text-muted-foreground">Fonctionnalité en développement...</p>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <AutomatedReports />
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <AdminActivityLogs />
           </TabsContent>
         </Tabs>
       </main>
