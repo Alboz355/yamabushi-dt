@@ -13,6 +13,11 @@ interface Subscription {
   payment_method?: string
 }
 
+const roleCache: { [key: string]: { role: string; timestamp: number } } = {}
+const CACHE_DURATION = 30000 // 30 seconds
+let lastApiCall = 0
+const API_COOLDOWN = 5000 // 5 seconds between API calls
+
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,23 +54,43 @@ export function useSubscription() {
       let userIsAdmin = false
       let userIsInstructor = false
 
-      try {
-        console.log("[v0] CLIENT: Checking admin status via API...")
-        const adminResponse = await fetch("/api/admin/users")
-        if (adminResponse.ok) {
-          const adminData = await adminResponse.json()
-          const currentUser = adminData.users?.find((u: any) => u.id === user.id)
-          userIsAdmin = currentUser?.role === "admin"
-          userIsInstructor = currentUser?.role === "instructor"
-          console.log("[v0] CLIENT: Admin check via API successful:", userIsAdmin)
-          console.log("[v0] CLIENT: Instructor check via API successful:", userIsInstructor)
-        } else {
+      const now = Date.now()
+      const cachedRole = roleCache[user.id]
+
+      if (cachedRole && now - cachedRole.timestamp < CACHE_DURATION) {
+        console.log("[v0] CLIENT: Using cached role:", cachedRole.role)
+        userIsAdmin = cachedRole.role === "admin"
+        userIsInstructor = cachedRole.role === "instructor"
+      } else if (now - lastApiCall > API_COOLDOWN) {
+        try {
+          console.log("[v0] CLIENT: Checking admin status via API...")
+          lastApiCall = now
+
+          const adminResponse = await fetch("/api/admin/users")
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json()
+            const currentUser = adminData.users?.find((u: any) => u.id === user.id)
+            const userRole = currentUser?.role || "user"
+
+            roleCache[user.id] = { role: userRole, timestamp: now }
+
+            userIsAdmin = userRole === "admin"
+            userIsInstructor = userRole === "instructor"
+            console.log("[v0] CLIENT: Admin check via API successful:", userIsAdmin)
+            console.log("[v0] CLIENT: Instructor check via API successful:", userIsInstructor)
+          } else {
+            throw new Error("API response not ok")
+          }
+        } catch (adminError) {
+          console.log("[v0] CLIENT: Admin API check failed, using email fallback")
           const adminEmails = ["admin@admin.com"]
           userIsAdmin = adminEmails.includes(user.email || "")
-          console.log("[v0] CLIENT: Admin check via email fallback:", userIsAdmin)
+
+          const fallbackRole = userIsAdmin ? "admin" : "user"
+          roleCache[user.id] = { role: fallbackRole, timestamp: now }
         }
-      } catch (adminError) {
-        console.log("[v0] CLIENT: Admin API check failed, using email fallback")
+      } else {
+        console.log("[v0] CLIENT: API cooldown active, using email fallback")
         const adminEmails = ["admin@admin.com"]
         userIsAdmin = adminEmails.includes(user.email || "")
       }
@@ -74,6 +99,15 @@ export function useSubscription() {
       console.log("[v0] CLIENT: Final instructor status:", userIsInstructor)
       setIsAdmin(userIsAdmin)
       setIsInstructor(userIsInstructor)
+
+      if (userIsInstructor && typeof window !== "undefined") {
+        const currentPath = window.location.pathname
+        if (currentPath === "/dashboard" || currentPath === "/") {
+          console.log("[v0] CLIENT: Redirecting instructor from dashboard to instructor interface")
+          router.replace("/instructor")
+          return
+        }
+      }
 
       if (userIsAdmin) {
         console.log("[v0] CLIENT: User is admin, bypassing subscription check")
@@ -91,7 +125,7 @@ export function useSubscription() {
       }
 
       if (userIsInstructor) {
-        console.log("[v0] CLIENT: User is instructor, bypassing subscription check")
+        console.log("[v0] CLIENT: User is instructor, providing instructor subscription")
         const instructorSubscription = {
           id: "instructor-subscription",
           status: "active",

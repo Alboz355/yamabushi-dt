@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Users, MessageSquare, Clock, Plus, Settings } from "lucide-react"
+import { Calendar, Users, MessageSquare, Clock, Plus, Settings, ArrowLeft } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
 import { useTranslation } from "@/lib/i18n/context"
 import { CourseManagement } from "@/components/instructor/course-management"
 import { RoomMessaging } from "@/components/instructor/room-messaging"
+import { useRouter } from "next/navigation"
 
 interface ClassSession {
   id: string
@@ -40,6 +41,7 @@ interface RoomMessage {
 
 export default function InstructorDashboard() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [todayClasses, setTodayClasses] = useState<ClassSession[]>([])
   const [upcomingClasses, setUpcomingClasses] = useState<ClassSession[]>([])
   const [recentMessages, setRecentMessages] = useState<RoomMessage[]>([])
@@ -187,6 +189,15 @@ export default function InstructorDashboard() {
               <div className="text-sm text-muted-foreground">{t("instructor.dashboard.title")}</div>
             </div>
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Retour Dashboard</span>
+              </Button>
               <Avatar>
                 <AvatarImage src={instructorInfo?.profiles?.profile_image_url || "/placeholder.svg"} />
                 <AvatarFallback>

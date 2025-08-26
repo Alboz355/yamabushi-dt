@@ -30,33 +30,6 @@ export default async function DashboardPage() {
     redirect("/admin")
   }
 
-  try {
-    const { createClient: createSupabaseClient } = await import("@supabase/supabase-js")
-    const adminSupabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    )
-
-    const { data: instructorCheck, error: instructorError } = await adminSupabase
-      .from("instructors")
-      .select("profile_id")
-      .eq("profile_id", data.user.id)
-      .single()
-
-    if (instructorCheck && !instructorError) {
-      console.log("[v0] SERVER: Instructor detected by API, redirecting to instructor dashboard:", data.user.email)
-      redirect("/instructor/dashboard")
-    }
-  } catch (error) {
-    console.log("[v0] SERVER: Instructor check failed, continuing as regular user:", error?.message || error)
-  }
-
   const { data: fullProfile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
   let activeSubscription = null
@@ -198,7 +171,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Planifier un cours</span>
@@ -224,7 +197,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V5a2 2 0 002-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          d="M9 19v-6a2 2 0 11-8 0 2 2 0 018 0V5a2 2 0 00-2-2H5a2 2 0 00-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Mes factures</span>

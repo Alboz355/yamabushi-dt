@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import type { User } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,24 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
   const router = useRouter()
   const supabase = createClient()
+  const [isInstructorByAPI, setIsInstructorByAPI] = useState(false)
+
+  useEffect(() => {
+    const checkInstructorStatus = async () => {
+      try {
+        const response = await fetch("/api/admin/users")
+        if (response.ok) {
+          const data = await response.json()
+          const currentUser = data.users?.find((u: any) => u.email === user.email)
+          setIsInstructorByAPI(currentUser?.effective_role === "instructor")
+        }
+      } catch (error) {
+        console.error("Error checking instructor status:", error)
+      }
+    }
+
+    checkInstructorStatus()
+  }, [user.email])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -38,7 +57,7 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
 
   const adminEmails = ["admin@admin.com"]
   const isAdmin = profile?.role === "admin" || adminEmails.includes(user.email || "")
-  const isInstructor = profile?.role === "instructor"
+  const isInstructor = profile?.role === "instructor" || isInstructorByAPI
 
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm">

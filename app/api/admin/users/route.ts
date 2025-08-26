@@ -35,10 +35,19 @@ export async function GET() {
       console.error("[v0] Error fetching invoices:", invoicesError)
     }
 
+    const { data: instructors, error: instructorsError } = await supabaseAdmin.from("instructors").select("*")
+
+    if (instructorsError) {
+      console.error("[v0] Error fetching instructors:", instructorsError)
+    }
+
     const enrichedUsers = authUsers.users.map((user) => {
       const profile = profiles?.find((p) => p.id === user.id)
       const userSubscriptions = subscriptions?.filter((s) => s.member_id === user.id) || []
       const userInvoices = invoices?.filter((i) => i.member_id === user.id) || []
+
+      const instructorRecord = instructors?.find((i) => i.profile_id === user.id)
+      const isInstructor = !!instructorRecord
 
       // Calculate subscription status
       const activeSubscription = userSubscriptions.find((s) => s.status === "active")
@@ -51,13 +60,20 @@ export async function GET() {
         (i) => i.month === currentMonth && i.year === currentYear && i.status === "paid",
       )
 
+      let effectiveRole = profile?.role || "user"
+      if (isInstructor) {
+        effectiveRole = "instructor"
+      } else if (user.email === "admin@admin.com") {
+        effectiveRole = "admin"
+      }
+
       return {
         id: user.id,
         email: user.email,
         first_name: profile?.first_name || "",
         last_name: profile?.last_name || "",
         phone: profile?.phone || "",
-        role: profile?.role || "user",
+        role: effectiveRole, // Use effective role that includes instructor detection
         created_at: user.created_at,
         last_sign_in_at: user.last_sign_in_at,
         subscription_status: activeSubscription?.status || "none",
@@ -66,10 +82,15 @@ export async function GET() {
         monthly_payment_status: currentMonthInvoice ? "paid" : "unpaid",
         total_invoices: userInvoices.length,
         unpaid_invoices: userInvoices.filter((i) => i.status === "pending").length,
+        is_instructor: isInstructor,
+        instructor_specialties: instructorRecord?.specialties || [],
+        instructor_certifications: instructorRecord?.certifications || [],
+        instructor_experience: instructorRecord?.years_experience || 0,
       }
     })
 
     console.log(`[v0] Successfully loaded ${enrichedUsers.length} users from admin API`)
+    console.log(`[v0] Found ${instructors?.length || 0} instructors in database`)
 
     return NextResponse.json({
       users: enrichedUsers,
