@@ -7,17 +7,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, MapPin, Users, AlertTriangle, CalendarDays, Star } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, AlertTriangle, CalendarDays, Star, UserCheck } from "lucide-react"
 import { format, addDays } from "date-fns"
 import { fr } from "date-fns/locale"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BottomNav } from "@/components/mobile/bottom-nav"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CoursesPage() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [instructorCourses, setInstructorCourses] = useState<any[]>([])
+  const [userBookings, setUserBookings] = useState<any[]>([])
 
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all")
   const [selectedClub, setSelectedClub] = useState<string>("all")
@@ -25,6 +28,8 @@ export default function CoursesPage() {
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"))
   const [bookingStatus, setBookingStatus] = useState({ canBook: true, noShowCount: 0 })
   const [bookingLoading, setBookingLoading] = useState<string | null>(null)
+
+  const { toast } = useToast()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,6 +47,9 @@ export default function CoursesPage() {
         if (user) {
           const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
           setProfile(profile)
+
+          await loadInstructorCourses()
+          await loadUserBookings(user.id)
         }
       } catch (error) {
         console.error("Error loading user data:", error)
@@ -52,6 +60,53 @@ export default function CoursesPage() {
 
     loadUserData()
   }, [supabase])
+
+  const loadInstructorCourses = async () => {
+    try {
+      const { data: courses, error } = await supabase
+        .from("unified_bookings")
+        .select("*")
+        .like("course_id", "instructor-%")
+        .gte("course_date", selectedDate)
+        .eq("status", "available")
+        .order("course_date", { ascending: true })
+        .order("course_time", { ascending: true })
+
+      if (error) {
+        console.error("Error loading instructor courses:", error)
+        return
+      }
+
+      console.log("[v0] Loaded instructor courses:", courses?.length || 0)
+      setInstructorCourses(courses || [])
+    } catch (error) {
+      console.error("Error loading instructor courses:", error)
+    }
+  }
+
+  const loadUserBookings = async (userId: string) => {
+    try {
+      const { data: bookings, error } = await supabase
+        .from("instructor_course_registrations")
+        .select("*")
+        .eq("user_id", userId)
+
+      if (error) {
+        console.error("Error loading user bookings:", error)
+        return
+      }
+
+      setUserBookings(bookings || [])
+    } catch (error) {
+      console.error("Error loading user bookings:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      loadInstructorCourses()
+    }
+  }, [selectedDate, user])
 
   if (loading) {
     return (
@@ -228,6 +283,7 @@ export default function CoursesPage() {
             availableSpots,
             price: discipline.name === "MMA" ? 35 : discipline.name.includes("Boxing") ? 25 : 30,
             rating: 4.2 + Math.random() * 0.8, // 4.2-5.0 rating
+            isInstructorCourse: false,
           })
         }
       })
@@ -262,10 +318,52 @@ export default function CoursesPage() {
               availableSpots,
               price: discipline.name === "MMA" ? 35 : discipline.name.includes("Boxing") ? 25 : 30,
               rating: 4.0 + Math.random() * 1.0, // 4.0-5.0 rating
+              isInstructorCourse: false,
             })
           }
         })
     }
+
+    instructorCourses.forEach((instructorCourse) => {
+      const discipline =
+        yamabushiDisciplines.find((d) => d.name.toLowerCase().includes(instructorCourse.course_name.toLowerCase())) ||
+        yamabushiDisciplines[0]
+      const club = yamabushiClubs[0] // Default club
+
+      // Check if user is already registered
+      const isBooked = userBookings.some(
+        (booking) =>
+          booking.course_id === instructorCourse.course_id.replace("instructor-", "").split("-")[0] &&
+          booking.session_date === instructorCourse.course_date,
+      )
+
+      courses.push({
+        id: instructorCourse.course_id,
+        discipline: {
+          ...discipline,
+          name: instructorCourse.course_name,
+        },
+        date: instructorCourse.course_date,
+        startTime: instructorCourse.course_time,
+        endTime: format(new Date(`2000-01-01 ${instructorCourse.course_time}`).getTime() + 90 * 60 * 1000, "HH:mm"),
+        duration: 90,
+        level: "beginner", // Default level for instructor courses
+        instructor: instructorCourse.instructor,
+        club: {
+          ...club,
+          name: instructorCourse.club_name || club.name,
+        },
+        room: "Dojo Principal",
+        maxParticipants: null, // Unlimited for instructor courses
+        currentBookings: 0,
+        availableSpots: 999,
+        price: 0, // Free instructor courses
+        rating: 4.8,
+        isInstructorCourse: true,
+        isBooked: isBooked,
+        originalCourseId: instructorCourse.course_id.replace("instructor-", "").split("-")[0],
+      })
+    })
 
     // Apply filters
     return courses
@@ -284,22 +382,89 @@ export default function CoursesPage() {
   const availableCourses = generateAvailableCourses()
 
   const bookCourse = async (courseId: string) => {
-    if (!bookingStatus.canBook) return
+    if (!bookingStatus.canBook || !user) return
 
     setBookingLoading(courseId)
 
-    // Simulate booking process
-    setTimeout(() => {
+    try {
       const course = availableCourses.find((c) => c.id === courseId)
-      if (course) {
-        course.currentBookings += 1
-        course.availableSpots -= 1
-        alert(
-          `✅ Cours "${course.discipline.name}" planifié avec succès!\n📅 ${format(new Date(course.date), "EEEE d MMMM", { locale: fr })} à ${course.startTime}\n🏢 ${course.club.name}`,
-        )
+      if (!course) return
+
+      if (course.isInstructorCourse) {
+        if (course.isBooked) {
+          // Cancel instructor course booking
+          const { error } = await supabase
+            .from("instructor_course_registrations")
+            .delete()
+            .eq("course_id", course.originalCourseId)
+            .eq("user_id", user.id)
+            .eq("session_date", course.date)
+
+          if (error) throw error
+
+          // Update unified_bookings
+          await supabase
+            .from("unified_bookings")
+            .update({
+              user_id: null,
+              status: "available",
+            })
+            .eq("course_id", courseId)
+
+          toast({
+            title: "Réservation annulée",
+            description: "Votre réservation a été annulée avec succès",
+          })
+        } else {
+          // Book instructor course
+          const { error } = await supabase.from("instructor_course_registrations").insert({
+            course_id: course.originalCourseId,
+            user_id: user.id,
+            session_date: course.date,
+            status: "registered",
+          })
+
+          if (error) throw error
+
+          // Update unified_bookings
+          await supabase
+            .from("unified_bookings")
+            .update({
+              user_id: user.id,
+              status: "booked",
+            })
+            .eq("course_id", courseId)
+
+          toast({
+            title: "Réservation confirmée",
+            description: `Vous êtes inscrit(e) au cours "${course.discipline.name}" !`,
+          })
+        }
+
+        // Reload data
+        await loadInstructorCourses()
+        await loadUserBookings(user.id)
+      } else {
+        // Regular course booking (simulate)
+        setTimeout(() => {
+          course.currentBookings += 1
+          course.availableSpots -= 1
+          toast({
+            title: "Cours planifié",
+            description: `Cours "${course.discipline.name}" planifié avec succès !`,
+          })
+        }, 1500)
       }
+    } catch (error) {
+      console.error("Error booking course:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de traiter votre réservation",
+        variant: "destructive",
+      })
+    } finally {
       setBookingLoading(null)
-    }, 1500)
+    }
   }
 
   const getLevelBadge = (level: string) => {
@@ -308,6 +473,7 @@ export default function CoursesPage() {
   }
 
   const getOccupancyColor = (current: number, max: number) => {
+    if (!max) return "text-green-600" // Unlimited
     const percentage = (current / max) * 100
     if (percentage < 50) return "text-green-600"
     if (percentage < 80) return "text-yellow-600"
@@ -469,9 +635,14 @@ export default function CoursesPage() {
               {availableCourses.map((course) => (
                 <Card
                   key={course.id}
-                  className="hover:shadow-xl transition-all duration-300 border-0 bg-white/90 backdrop-blur-sm overflow-hidden group"
+                  className={`hover:shadow-xl transition-all duration-300 border-0 bg-white/90 backdrop-blur-sm overflow-hidden group ${
+                    course.isInstructorCourse ? "ring-2 ring-green-200" : ""
+                  }`}
                 >
-                  <div className="h-2 w-full" style={{ backgroundColor: course.discipline.color }} />
+                  <div
+                    className="h-2 w-full"
+                    style={{ backgroundColor: course.isInstructorCourse ? "#22c55e" : course.discipline.color }}
+                  />
 
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
@@ -479,7 +650,15 @@ export default function CoursesPage() {
                         <CardTitle className="text-xl flex items-center gap-3 mb-2">
                           <span className="text-2xl">{course.discipline.emoji}</span>
                           <div>
-                            <div className="font-bold">{course.discipline.name}</div>
+                            <div className="font-bold flex items-center gap-2">
+                              {course.discipline.name}
+                              {course.isInstructorCourse && (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Cours Instructeur
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-sm text-muted-foreground font-normal">avec {course.instructor}</div>
                           </div>
                         </CardTitle>
@@ -487,7 +666,10 @@ export default function CoursesPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <Badge
                             className="text-xs px-2 py-1"
-                            style={{ backgroundColor: course.discipline.color, color: "white" }}
+                            style={{
+                              backgroundColor: course.isInstructorCourse ? "#22c55e" : course.discipline.color,
+                              color: "white",
+                            }}
                           >
                             {getLevelBadge(course.level)}
                           </Badge>
@@ -499,8 +681,10 @@ export default function CoursesPage() {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">{course.price}.-</div>
-                        <div className="text-xs text-muted-foreground">CHF</div>
+                        <div className={`text-2xl font-bold ${course.price === 0 ? "text-green-600" : "text-primary"}`}>
+                          {course.price === 0 ? "Gratuit" : `${course.price}.-`}
+                        </div>
+                        {course.price > 0 && <div className="text-xs text-muted-foreground">CHF</div>}
                       </div>
                     </div>
                   </CardHeader>
@@ -528,7 +712,7 @@ export default function CoursesPage() {
                         <span
                           className={`font-medium ${getOccupancyColor(course.currentBookings, course.maxParticipants)}`}
                         >
-                          {course.currentBookings}/{course.maxParticipants}
+                          {course.maxParticipants ? `${course.currentBookings}/${course.maxParticipants}` : "Illimité"}
                         </span>
                       </div>
                     </div>
@@ -546,27 +730,33 @@ export default function CoursesPage() {
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="text-xs">
-                          {course.availableSpots} places libres
+                          {course.maxParticipants ? `${course.availableSpots} places libres` : "Places illimitées"}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{course.duration} min</span>
                       </div>
 
                       <Button
                         onClick={() => bookCourse(course.id)}
-                        disabled={!bookingStatus.canBook || bookingLoading === course.id || course.availableSpots === 0}
+                        disabled={
+                          !bookingStatus.canBook ||
+                          bookingLoading === course.id ||
+                          (course.availableSpots === 0 && course.maxParticipants)
+                        }
                         size="lg"
                         className="min-w-[140px] font-semibold"
-                        style={{ backgroundColor: course.discipline.color }}
+                        style={{ backgroundColor: course.isInstructorCourse ? "#22c55e" : course.discipline.color }}
                       >
                         {bookingLoading === course.id ? (
                           <span className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Planification...
+                            {course.isInstructorCourse && course.isBooked ? "Annulation..." : "Planification..."}
                           </span>
-                        ) : course.availableSpots === 0 ? (
+                        ) : course.maxParticipants && course.availableSpots === 0 ? (
                           "❌ Complet"
+                        ) : course.isInstructorCourse && course.isBooked ? (
+                          "❌ Annuler"
                         ) : (
-                          "✅ Planifier"
+                          "✅ J'y serai !"
                         )}
                       </Button>
                     </div>

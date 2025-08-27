@@ -10,6 +10,7 @@ import { createBrowserClient } from "@supabase/ssr"
 import { useTranslation } from "@/lib/i18n/context"
 import { CourseManagement } from "@/components/instructor/course-management"
 import { RoomMessaging } from "@/components/instructor/room-messaging"
+import { CourseCreation } from "@/components/instructor/course-creation"
 import { useRouter } from "next/navigation"
 
 interface ClassSession {
@@ -266,9 +267,10 @@ export default function InstructorDashboard() {
         </div>
 
         <Tabs defaultValue="today" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
             <TabsTrigger value="upcoming">À Venir</TabsTrigger>
+            <TabsTrigger value="create">Créer Cours</TabsTrigger>
             <TabsTrigger value="participants">Participants</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
@@ -295,6 +297,10 @@ export default function InstructorDashboard() {
             </div>
 
             <CourseManagement period="upcoming" />
+          </TabsContent>
+
+          <TabsContent value="create" className="space-y-6">
+            <CourseCreation />
           </TabsContent>
 
           <TabsContent value="participants" className="space-y-6">
