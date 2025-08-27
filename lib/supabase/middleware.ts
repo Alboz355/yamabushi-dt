@@ -12,10 +12,7 @@ export async function updateSession(request: NextRequest, response?: NextRespons
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("[v0] Missing Supabase environment variables in middleware:", {
-      url: !!supabaseUrl,
-      key: !!supabaseAnonKey,
-    })
+    console.error("[v0] Missing Supabase environment variables in middleware")
     return supabaseResponse
   }
 
@@ -47,8 +44,10 @@ export async function updateSession(request: NextRequest, response?: NextRespons
   const isSubscriptionPath = pathname.includes("/subscription")
   const isAdminPath = pathname.includes("/admin")
   const isInstructorPath = pathname.includes("/instructor")
+  const isApiPath = pathname.startsWith("/api")
 
-  if (!isRootPath && !user && !isAuthPath && !isSubscriptionPath) {
+  // Only redirect unauthenticated users from protected routes
+  if (!isRootPath && !user && !isAuthPath && !isSubscriptionPath && !isApiPath) {
     const url = request.nextUrl.clone()
     const locale = pathname.split("/")[1]
     if (locale && locale.length === 2) {
@@ -56,24 +55,77 @@ export async function updateSession(request: NextRequest, response?: NextRespons
     } else {
       url.pathname = "/fr/auth/login"
     }
+    console.log(`[v0] MIDDLEWARE: Redirecting unauthenticated user to login: ${pathname}`)
     return NextResponse.redirect(url)
   }
 
-  if (user && isAdminPath) {
-    const isAdminEmail = user.email === "admin@admin.com" || user.email === "leartshabija0@gmail.com"
+  // Block access to admin routes for non-admins (no redirect, just block)
+  if (user && isAdminPath && !isApiPath) {
+    const isHardcodedAdmin = user.email === "admin@admin.com"
 
-    if (!isAdminEmail) {
-      // Non-admin trying to access admin routes - redirect to dashboard
-      const url = request.nextUrl.clone()
-      url.pathname = "/dashboard"
-      console.log(`[v0] MIDDLEWARE: Blocking non-admin access to ${pathname}`)
-      return NextResponse.redirect(url)
+    if (!isHardcodedAdmin) {
+      // Check database role with error handling
+      try {
+        const { data: profile, error } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+
+        if (error || !profile || profile.role !== "admin") {
+          console.log(`[v0] MIDDLEWARE: Blocking non-admin access to ${pathname}: ${user.email}`)
+          const url = request.nextUrl.clone()
+          url.pathname = "/dashboard"
+          return NextResponse.redirect(url)
+        }
+      } catch (error) {
+        console.error(`[v0] MIDDLEWARE: Error checking admin role:`, error)
+        const url = request.nextUrl.clone()
+        url.pathname = "/dashboard"
+        return NextResponse.redirect(url)
+      }
     }
+
+    console.log(`[v0] MIDDLEWARE: Admin access granted to ${pathname}: ${user.email}`)
   }
 
-  if (user && isInstructorPath) {
-    // TODO: Add proper instructor role checking when instructor system is ready
-    console.log(`[v0] MIDDLEWARE: Allowing access to instructor route: ${pathname}`)
+  // Block access to instructor routes for non-instructors (no redirect, just block)
+  if (user && isInstructorPath && !isApiPath) {
+    try {
+      const adminApiUrl = new URL("/api/admin/users", request.nextUrl.origin)
+      const adminResponse = await fetch(adminApiUrl.toString(), {
+        headers: {
+          Cookie: request.headers.get("cookie") || "",
+        },
+      })
+
+      if (adminResponse.ok) {
+        const adminData = await adminResponse.json()
+        const isInstructor = adminData.users?.some((u: any) => u.email === user.email && u.role === "instructor")
+
+        if (!isInstructor) {
+          console.log(`[v0] MIDDLEWARE: Blocking non-instructor access to ${pathname}: ${user.email}`)
+          const url = request.nextUrl.clone()
+          url.pathname = "/dashboard"
+          return NextResponse.redirect(url)
+        }
+
+        console.log(`[v0] MIDDLEWARE: Instructor access granted to ${pathname}: ${user.email}`)
+      } else {
+        // Fallback to database query if API fails
+        const { data: profile, error } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+
+        if (error || !profile || profile.role !== "instructor") {
+          console.log(`[v0] MIDDLEWARE: Blocking non-instructor access to ${pathname}: ${user.email}`)
+          const url = request.nextUrl.clone()
+          url.pathname = "/dashboard"
+          return NextResponse.redirect(url)
+        }
+
+        console.log(`[v0] MIDDLEWARE: Instructor access granted to ${pathname}: ${user.email}`)
+      }
+    } catch (error) {
+      console.error(`[v0] MIDDLEWARE: Error checking instructor role:`, error)
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: Return the supabaseResponse object as-is to maintain cookie sync

@@ -60,7 +60,7 @@ interface ProgressNote {
 
 export default function InstructorPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<any>({ first_name: "Instructeur", last_name: "" })
   const [loading, setLoading] = useState(true)
   const [todayClasses, setTodayClasses] = useState<ClassSession[]>([])
   const [upcomingClasses, setUpcomingClasses] = useState<ClassSession[]>([])
@@ -96,15 +96,40 @@ export default function InstructorPage() {
         return
       }
 
-      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+      let isInstructor = false
 
-      if (!profileData || profileData.role !== "instructor") {
+      // Check hardcoded instructors first (if any)
+      const hardcodedInstructors = ["instructor@instructor.com"] // Add hardcoded instructor emails if needed
+      if (hardcodedInstructors.includes(user.email || "")) {
+        isInstructor = true
+      } else {
+        // Use admin API to check instructor role
+        try {
+          const response = await fetch("/api/admin/users")
+          if (response.ok) {
+            const data = await response.json()
+            const users = Array.isArray(data) ? data : data.users || []
+            const userRecord = users.find((u: any) => u.email === user.email)
+            isInstructor = userRecord?.role === "instructor"
+          }
+        } catch (apiError) {
+          console.error("Admin API error, checking profiles table:", apiError)
+          // Fallback to profiles table query
+          const { data: profileData } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+          isInstructor = profileData?.role === "instructor"
+        }
+      }
+
+      if (!isInstructor) {
         router.push("/dashboard")
         return
       }
 
+      // Get profile data for display
+      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
       setUser(user)
-      setProfile(profileData)
+      setProfile(profileData || { first_name: "Instructeur", last_name: "" })
       await loadInstructorData(user.id)
     } catch (error) {
       console.error("Error checking instructor access:", error)

@@ -12,6 +12,7 @@ import { CourseRecommendations } from "@/components/dashboard/course-recommendat
 import { ClubMessages } from "@/components/dashboard/club-messages"
 import { BottomNav } from "@/components/mobile/bottom-nav"
 import { SubscriptionGuard } from "@/components/auth/subscription-guard"
+import { RoleRedirectHandler } from "@/components/auth/role-redirect-handler"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -21,14 +22,7 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
-  // Check admin status using email fallback
-  const adminEmails = ["admin@admin.com"]
-  const isAdmin = adminEmails.includes(data.user.email || "")
-
-  if (isAdmin) {
-    console.log("[v0] SERVER: Admin detected by email, redirecting to admin panel:", data.user.email)
-    redirect("/admin")
-  }
+  console.log("[v0] DASHBOARD: Loading dashboard for user:", data.user.email)
 
   const { data: fullProfile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
@@ -136,6 +130,7 @@ export default async function DashboardPage() {
 
   return (
     <SubscriptionGuard>
+      <RoleRedirectHandler />
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
         <DashboardHeader user={data.user} profile={fullProfile} />
 
@@ -171,7 +166,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Planifier un cours</span>
@@ -210,7 +205,7 @@ export default async function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0V5a2 2 0 00-2-2H5a2 2 0 00-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                       <span className="text-sm md:text-base">Mon profil</span>
